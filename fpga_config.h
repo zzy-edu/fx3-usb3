@@ -1,6 +1,10 @@
 #ifndef _FPGA_CONFIG_H_
 #define _FPGA_CONFIG_H_
 #include "cyu3types.h"
+
+
+#define FPGA_REG_ADDR (0x0001);
+
 /*function
 ********************************************************************************
 <PRE>

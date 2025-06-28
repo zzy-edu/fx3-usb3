@@ -737,29 +737,17 @@ CyBool_t exe_rdwr_grab_param(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 {
 	fill_command_char(cmdSend,'e', 'e', 'm', 'b');
 	int extraParamNum = (sizeof(tag_grab_config)-8) >> 2; // -8 是因为FX3给头加了一个8字节的校验尾，不需要上传
-
+	tag_grab_config PcParam = *((tag_grab_config*)(&cmdRecv->Params[0]));
 	//读取指定模式用户配置
 	if(cmdRecv->Param_Num == 0)//读配置
 	{
-		if(CyFalse == GrabReadUserParam((tag_grab_config *)(&cmdSend->Params[0])))
-		{
-			return CyFalse;
-		}
-		else
-		{
-			cmdSend->Param_Num = cmdRecv->Param_Num + extraParamNum;
-		}
+		cmdSend->Param_Num = cmdRecv->Param_Num + extraParamNum;
+		CyU3PMemCopy((uint8_t*)(&cmdSend->Params[0]),(uint8_t*)(&grabconfParam),sizeof(tag_grab_config)-8);
 	}
 	else if(cmdRecv->Param_Num == extraParamNum) //写配置
 	{
-	    if(CyFalse == GrabWriteUserParam((tag_grab_config *)(&cmdRecv->Params[0])))
-	    {
-	    	return CyFalse;
-	    }
-	    else
-	    {
 	        cmdSend->Param_Num = 0;
-	    }
+	        if(CyFalse == GrabParamPcCompareFx3(PcParam)) return CyFalse;
 	}
 	else
 	{

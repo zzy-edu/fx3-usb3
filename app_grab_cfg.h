@@ -146,7 +146,7 @@ extern uint32_t grabsysStatus;
 ********************************************************************************
 <PRE>
 函数名   :
-功能     : 存储/读取用户参数区内容，设置默认加载用户参数区是哪个
+功能     : 存储/读取用户参数区内容
 参数     :
 	tagCameraParam *pParam 参数存储的结构体定义
 返回值   :
@@ -158,11 +158,8 @@ extern uint32_t grabsysStatus;
 作者     :
 </PRE>
 *******************************************************************************/
-CyBool_t GrabWriteUserParam(tag_grab_config *pParam);// 存储当前参数到用户区
-
-CyBool_t GrabSetDefaultUserParam( int nIndex );// 设置默认参数区
-
-CyBool_t GrabReadUserParam(tag_grab_config *pParam);// 读取用户区参数
+CyBool_t GrabWriteUserParam(tag_grab_config *pParam, int nIndex);// 存储当前参数到用户区
+CyBool_t GrabReadUserParam(tag_grab_config *pParam, int nIndex);// 读取用户区参数
 
 
 /*function
@@ -170,9 +167,9 @@ CyBool_t GrabReadUserParam(tag_grab_config *pParam);// 读取用户区参数
 <PRE>
 函数名   :
 功能     : 获取指定模式下的用户参数配置信息，这里的思路是上电需要先读fpga的程序版本，确定nIndex
-参数     :
-	tagCameraParam *pParam 参数存储的结构体定义
-返回值   : 正确是0-3 错误是-1
+参数     : void
+返回值   : flash里的参数对且读取成功 	返回CyTrue
+		flash里的参数不对或读取失败	返回CyFalse
 抛出异常 :
 --------------------------------------------------------------------------------
 备注     :
@@ -181,7 +178,7 @@ CyBool_t GrabReadUserParam(tag_grab_config *pParam);// 读取用户区参数
 作者     :
 </PRE>
 *******************************************************************************/
-int GrabGetDefaultUserParam(void);
+CyBool_t GrabGetDefaultUserParam(void);
 
 /*function
 ********************************************************************************
@@ -200,4 +197,23 @@ int GrabGetDefaultUserParam(void);
 </PRE>
 *******************************************************************************/
 CyBool_t GrabGetSystemStatus(uint32_t *status);
+
+/*function
+********************************************************************************
+<PRE>
+函数名   :
+功能     : 将上位机传下来的配置参数和本地的做比较
+参数     :
+	tagCameraParam PcParam 上位机下传的配置参数
+返回值   :
+抛出异常 :
+--------------------------------------------------------------------------------
+备注     :
+典型用法 :
+--------------------------------------------------------------------------------
+作者     :
+</PRE>
+*******************************************************************************/
+CyBool_t GrabParamCompareandSet(tag_grab_config PcParam);
+
 #endif
