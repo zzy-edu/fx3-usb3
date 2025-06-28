@@ -747,7 +747,7 @@ CyBool_t exe_rdwr_grab_param(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 	else if(cmdRecv->Param_Num == extraParamNum) //Ð´ÅäÖÃ
 	{
 	        cmdSend->Param_Num = 0;
-	        if(CyFalse == GrabParamPcCompareFx3(PcParam)) return CyFalse;
+	        if(CyFalse == GrabParamCompareandSet(PcParam)) return CyFalse;
 	}
 	else
 	{

@@ -176,29 +176,29 @@ CyBool_t GrabParamCompareandSet(tag_grab_config PcParam)
 {
 	if(PcParam.header != PARAM_VALID_HCODE) return CyFalse;
 	//Todo ÊµÏÖË¢fpga¼Ä´æÆ÷
-	if(grabconfParam.n_dev_index != PcParam.n_dev_index){grabconfParam.n_dev_index = PcParam.n_dev_index};
-	if(grabconfParam.n_pixel_format != PcParam.n_pixel_format){grabconfParam.n_pixel_format = PcParam.n_pixel_format; };
-	if(grabconfParam.n_tap_num != PcParam.n_tap_num){grabconfParam.n_tap_num = PcParam.n_tap_num; /*fpga_reg_write*/};
-	if(grabconfParam.n_tap_mode != PcParam.n_tap_mode){grabconfParam.n_tap_mode = PcParam.n_tap_mode; /*fpga_reg_write*/};
-	if(grabconfParam.n_width != PcParam.n_width){grabconfParam.n_width = PcParam.n_width; /*fpga_reg_write*/};
-	if(grabconfParam.n_height != PcParam.n_height){grabconfParam.n_height = PcParam.n_height; /*fpga_reg_write*/};
-	if(grabconfParam.n_len_of_raw != PcParam.n_len_of_raw){grabconfParam.n_len_of_raw = PcParam.n_len_of_raw; /*fpga_reg_write*/};
-	if(grabconfParam.n_device_type != PcParam.n_device_type){grabconfParam.n_device_type = PcParam.n_device_type; /*fpga_reg_write*/};
-	if(grabconfParam.nBitCount != PcParam.nBitCount){grabconfParam.nBitCount = PcParam.nBitCount;};
-	if(grabconfParam.n_cap_channel_num != PcParam.n_cap_channel_num){grabconfParam.n_cap_channel_num = PcParam.n_cap_channel_num; /*fpga_reg_write*/};
-	if(grabconfParam.n_dval_lval_mode != PcParam.n_dval_lval_mode){grabconfParam.n_dval_lval_mode = PcParam.n_dval_lval_mode; /*fpga_reg_write*/};
-	if(grabconfParam.n_line_clk_num != PcParam.n_line_clk_num){grabconfParam.n_line_clk_num = PcParam.n_line_clk_num; /*fpga_reg_write*/};
-	if(grabconfParam.n_line_cnt != PcParam.n_line_cnt){grabconfParam.n_line_cnt = PcParam.n_line_cnt; /*fpga_reg_write*/};
-	if(grabconfParam.n_x_offset != PcParam.n_x_offset){grabconfParam.n_x_offset = PcParam.n_x_offset; /*fpga_reg_write*/};
-	if(grabconfParam.n_y_offset != PcParam.n_y_offset){grabconfParam.n_y_offset = PcParam.n_y_offset; /*fpga_reg_write*/};
-	if(grabconfParam.n_fval_set_value != PcParam.n_fval_set_value){grabconfParam.n_fval_set_value = PcParam.n_fval_set_value;};
-	if(grabconfParam.n_test_mode != PcParam.n_test_mode){grabconfParam.n_test_mode = PcParam.n_test_mode; /*fpga_reg_write*/};
-	if(grabconfParam.n_cc1_pwm_high != PcParam.n_cc1_pwm_high){grabconfParam.n_cc1_pwm_high = PcParam.n_cc1_pwm_high; /*fpga_reg_write*/};
-	if(grabconfParam.n_cc1_pwm_low != PcParam.n_cc1_pwm_low){grabconfParam.n_cc1_pwm_low = PcParam.n_cc1_pwm_low; /*fpga_reg_write*/};
-	if(grabconfParam.n_cc1_pwm_cnt != PcParam.n_cc1_pwm_cnt){grabconfParam.n_cc1_pwm_cnt = PcParam.n_cc1_pwm_cnt; /*fpga_reg_write*/};
-	if(grabconfParam.n_cc1_pwm_current != PcParam.n_cc1_pwm_current){grabconfParam.n_cc1_pwm_current = PcParam.n_cc1_pwm_current; /*fpga_reg_write*/};
-	if(grabconfParam.S1_sel != PcParam.S1_sel){grabconfParam.S1_sel = PcParam.S1_sel; /*fpga_reg_write*/};
-	if(grabconfParam.S2_sel != PcParam.S2_sel){grabconfParam.S2_sel = PcParam.S2_sel; /*fpga_reg_write*/};
+	if(grabconfParam.n_dev_index != PcParam.n_dev_index){grabconfParam.n_dev_index = PcParam.n_dev_index;}
+	if(grabconfParam.n_pixel_format != PcParam.n_pixel_format){grabconfParam.n_pixel_format = PcParam.n_pixel_format; }
+	if(grabconfParam.n_tap_num != PcParam.n_tap_num){grabconfParam.n_tap_num = PcParam.n_tap_num; /*fpga_reg_write*/}
+	if(grabconfParam.n_tap_mode != PcParam.n_tap_mode){grabconfParam.n_tap_mode = PcParam.n_tap_mode; /*fpga_reg_write*/}
+	if(grabconfParam.n_width != PcParam.n_width){grabconfParam.n_width = PcParam.n_width; /*fpga_reg_write*/}
+	if(grabconfParam.n_height != PcParam.n_height){grabconfParam.n_height = PcParam.n_height; /*fpga_reg_write*/}
+	if(grabconfParam.n_len_of_raw != PcParam.n_len_of_raw){grabconfParam.n_len_of_raw = PcParam.n_len_of_raw; /*fpga_reg_write*/}
+	if(grabconfParam.n_device_type != PcParam.n_device_type){grabconfParam.n_device_type = PcParam.n_device_type; /*fpga_reg_write*/}
+	if(grabconfParam.nBitCount != PcParam.nBitCount){grabconfParam.nBitCount = PcParam.nBitCount;}
+	if(grabconfParam.n_cap_channel_num != PcParam.n_cap_channel_num){grabconfParam.n_cap_channel_num = PcParam.n_cap_channel_num; /*fpga_reg_write*/}
+	if(grabconfParam.n_dval_lval_mode != PcParam.n_dval_lval_mode){grabconfParam.n_dval_lval_mode = PcParam.n_dval_lval_mode; /*fpga_reg_write*/}
+	if(grabconfParam.n_line_clk_num != PcParam.n_line_clk_num){grabconfParam.n_line_clk_num = PcParam.n_line_clk_num; /*fpga_reg_write*/}
+	if(grabconfParam.n_line_cnt != PcParam.n_line_cnt){grabconfParam.n_line_cnt = PcParam.n_line_cnt; /*fpga_reg_write*/}
+	if(grabconfParam.n_x_offset != PcParam.n_x_offset){grabconfParam.n_x_offset = PcParam.n_x_offset; /*fpga_reg_write*/}
+	if(grabconfParam.n_y_offset != PcParam.n_y_offset){grabconfParam.n_y_offset = PcParam.n_y_offset; /*fpga_reg_write*/}
+	if(grabconfParam.n_fval_set_value != PcParam.n_fval_set_value){grabconfParam.n_fval_set_value = PcParam.n_fval_set_value;}
+	if(grabconfParam.n_test_mode != PcParam.n_test_mode){grabconfParam.n_test_mode = PcParam.n_test_mode; /*fpga_reg_write*/}
+	if(grabconfParam.n_cc1_pwm_high != PcParam.n_cc1_pwm_high){grabconfParam.n_cc1_pwm_high = PcParam.n_cc1_pwm_high; /*fpga_reg_write*/}
+	if(grabconfParam.n_cc1_pwm_low != PcParam.n_cc1_pwm_low){grabconfParam.n_cc1_pwm_low = PcParam.n_cc1_pwm_low; /*fpga_reg_write*/}
+	if(grabconfParam.n_cc1_pwm_cnt != PcParam.n_cc1_pwm_cnt){grabconfParam.n_cc1_pwm_cnt = PcParam.n_cc1_pwm_cnt; /*fpga_reg_write*/}
+	if(grabconfParam.n_cc1_pwm_current != PcParam.n_cc1_pwm_current){grabconfParam.n_cc1_pwm_current = PcParam.n_cc1_pwm_current; /*fpga_reg_write*/}
+	if(grabconfParam.S1_sel != PcParam.S1_sel){grabconfParam.S1_sel = PcParam.S1_sel; /*fpga_reg_write*/}
+	if(grabconfParam.S2_sel != PcParam.S2_sel){grabconfParam.S2_sel = PcParam.S2_sel; /*fpga_reg_write*/}
 
 	return CyTrue;
 }
