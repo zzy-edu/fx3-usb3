@@ -1,0 +1,10 @@
+# 编译文件
+/Debug/
+/Debug/
+/Release/ 
+/Release/
+
+# 配置文件
+/.vscode/
+/.settings/
+.gitignore
