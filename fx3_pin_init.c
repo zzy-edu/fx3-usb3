@@ -70,6 +70,7 @@ CyU3PReturnStatus_t fx3_device_init(void)
     }
 
     return CY_U3P_SUCCESS;
+
 handle_fatal_error:
     while (1);
 }

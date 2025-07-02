@@ -64,6 +64,7 @@
 #include "fpga_config.h"
 #include "cyfxslfifosync.h"
 #include "app_cmd_analysis.h"
+#include "app_grab_cfg.h"
 #include "cyu3dma.h"
 #include "cyu3error.h"
 #include "cyu3gpif.h"
@@ -503,12 +504,13 @@ CyFxSlFifoApplnUSBSetupCB(
                 if (glIsApplnActive)
                 {
                 	CyU3PDebugPrint(4,"CY_U3P_USB_SC_CLEAR_FEATURE happened");
+//                	GrabStopFpgaWork();
                 	CyFxSlFifoApplnStop();
                     /* Give a chance for the main thread loop to run. */
                     CyU3PThreadSleep (1);
                     CyFxSlFifoApplnStart();
                     CyU3PUsbStall (wIndex, CyFalse, CyTrue);
-
+//                    GrabStartFpgaWork();
                     CyU3PUsbAckSetup ();
                     isHandled = CyTrue;
                 }
@@ -635,7 +637,7 @@ CyFxSlFifoApplnUSBSetupCB(
                 apiRetStatus = CyU3PUartSetConfig (&uartConfig, NULL);
                 if (apiRetStatus == CY_U3P_SUCCESS)
                 {
-                    CyU3PMemCopy ((uint8_t *)&glUartConfig, (uint8_t *)&uartConfig,
+                    CyU3PMemCopy((uint8_t *)&glUartConfig, (uint8_t *)&uartConfig,
                             sizeof (CyU3PUartConfig_t));
                 }
             }
@@ -684,7 +686,7 @@ CyFxSlFifoApplnUSBSetupCB(
 			#endif
             if (glIsApplnActive)
             {
-                CyU3PUsbAckSetup ();
+                CyU3PUsbAckSetup();
             }
             else
                 CyU3PUsbStall (0, CyTrue, CyFalse);
@@ -730,7 +732,7 @@ void CyFxSlFifoApplnUSBEventCB(
             CyFxSlFifoApplnStop();
 		#ifdef debug
 			#ifdef cdc
-				CyFxUSBUARTAppStop ();
+				CyFxUSBUARTAppStop();
 			#endif
 			CyU3PDebugDeInit(); //避免CDC端点被debug占用，导致重启设备失败
 		#endif
@@ -757,7 +759,7 @@ void CyFxSlFifoApplnUSBEventCB(
 			CyFxSlFifoApplnStop();
 
             #ifdef cdc
-            CyFxUSBUARTAppStop ();
+            CyFxUSBUARTAppStop();
         	#endif
 
 			#ifdef debug
@@ -1022,21 +1024,11 @@ void SlFifoAppThread_Entry(
     }
     for (;;)
     {
-        if (ledState == 0)
-        {
             CyU3PGpioSetValue(FX3_LED_PIN, CyTrue);
             CyU3PThreadSleep(500);
             CyU3PGpioSetValue(FX3_LED_PIN, CyFalse);
             CyU3PThreadSleep(500);
-        }
-        else if (ledState == 1)
-        {
-            ledState = 0;
-            CyU3PGpioSetValue(FX3_LED_PIN, CyTrue);
-            CyU3PThreadSleep(125);
-            CyU3PGpioSetValue(FX3_LED_PIN, CyFalse);
-            CyU3PThreadSleep(125);
-        }
+//            GrabGetSystemStatus();
     }
 }
 

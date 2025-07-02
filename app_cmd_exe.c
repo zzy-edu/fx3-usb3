@@ -186,17 +186,9 @@ CyBool_t exe_get_status(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent 
 {
     uint16_t nT;
     fill_command_char(cmdSend, 'g', 's', 0, 0);
-    // TODO : fill FPGA_REG_IMAGE_STATUS_ADDR
-    fpga_reg_read(/*FPGA_REG_IMAGE_STATUS_ADDR*/ 456, &nT, 1);
+    // 返回 grabsysStatus
     cmdSend->Param_Num = 1;
-    if ((nT & 1) == 1)
-    {
-        cmdSend->Params[0] = 0;
-    }
-    else
-    {
-        cmdSend->Params[0] = nT | 0xFF00;
-    }
+    CyU3PMemCopy((uint8_t*)(&cmdSend->Params[0]),(uint8_t*)(&grabsysStatus),4);
     return CyTrue;
 }
 
@@ -496,9 +488,6 @@ CyBool_t exe_dev_grade(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *
     return CyTrue;
 }
 
-
-
-
 // 获取用户参数区内容， Params[0] nIndex Params[1] 参数个数
 CyBool_t exe_save_dev_sn(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend)
 {
@@ -737,10 +726,11 @@ CyBool_t exe_rdwr_grab_param(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 {
 	fill_command_char(cmdSend,'e', 'e', 'm', 'b');
 	int extraParamNum = (sizeof(tag_grab_config)-8) >> 2; // -8 是因为FX3给头加了一个8字节的校验尾，不需要上传
-	tag_grab_config PcParam = *((tag_grab_config*)(&cmdRecv->Params[0]));
-	//读取指定模式用户配置
+	tag_grab_config *PcParam = ((tag_grab_config*)(&cmdRecv->Params[0]));
+	//读取当前模式用户配置
 	if(cmdRecv->Param_Num == 0)//读配置
 	{
+//		GrabParamUpdate();
 		cmdSend->Param_Num = cmdRecv->Param_Num + extraParamNum;
 		CyU3PMemCopy((uint8_t*)(&cmdSend->Params[0]),(uint8_t*)(&grabconfParam),sizeof(tag_grab_config)-8);
 	}
@@ -760,15 +750,21 @@ CyBool_t exe_rdwr_grab_param(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 CyBool_t exe_clear_frame_num(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend)
 {
 	fill_command_char(cmdSend, 'e', 'a', 'i', '\0');
-	//TODO
+	//TODO 有多个清零动作，需要确认一下 这些动作走的是否是同一个命令
 	return CyTrue;
 }
 
 CyBool_t exe_set_test_mode(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend)
 {
 	fill_command_char(cmdSend,'s', 't', 'm', 'd');
-	//TODO
-	return CyTrue;
+	if(cmdRecv->Param_Num == 1)
+	{
+		fpga_reg_write(TEST_PATTERN_REG_ADDRESS,(uint16_t *)(&cmdRecv->Params[0]),1);
+		cmdSend->Param_Num = 1;
+		return CyTrue;
+	}
+	CyU3PDebugPrint(4,"\nParam_Num error");
+	return CyFalse;
 }
 
 cmd_tag_t cmd_tag[] __attribute__((aligned(32))) =

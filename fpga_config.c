@@ -2,6 +2,7 @@
 #include "fx3_pin_define.h"
 #include "fx3_spi.h"
 #include "mcu_spi.h"
+#include "app_grab_cfg.h"
 #include <cyu3gpio.h>
 
 /*function
@@ -83,6 +84,7 @@ CyBool_t fpga_init(void)
 //        }
         else
         {
+//        	if(GrabGetDefaultUserParam() == CyFalse){CyU3PDebugPrint(4,"\nUSE DEFALUT PARAM");}
             return CyTrue;
         }
     }
@@ -116,11 +118,11 @@ void fpga_reg_read(uint16_t startAddr, uint16_t *pData, uint16_t len)
 
     for (i = 0; i < len; i++)
     {
-        Buffer[0] = ((startAddr + i) >> 8) & 0xFF;
-        Buffer[0] |= 0x80;
-        Buffer[1] = (startAddr + i) & 0xFF;
+        Buffer[0] = ((startAddr + i) >> 8) & 0xFF; //高位地址
+        Buffer[0] |= 0x80; //写标志
+        Buffer[1] = (startAddr + i) & 0xFF;//低位地址
         FxIOSpiWriteRead(Buffer, 2, &Buffer[2], 2, 2);
-        ptmp = (uint8_t *)(&pData[i]);
+        ptmp = (uint8_t *)(&pData[i]); //pData[i],i+1地址偏移16位
         ptmp[0] = Buffer[3];
         ptmp[1] = Buffer[2];
     }

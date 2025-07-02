@@ -39,11 +39,16 @@
  * 15-16M 	grab_param存储用
  */
 
+#define	SET_BIT(x, bit)	(x |= (1 << bit))	/* 置位第bit位 */
+#define	CLEAR_BIT(x, bit)	(x &= ~(1 << bit))	/* 清零第bit位 */
+
 #define PARAM_VALID_HCODE (0x0143504400435044) // 当存储区开始为此code的时候表示该片code有效
 #define PARAM_VALID_TCODE (0x0144514501445145)
 #define IMAGE_WIDTH (640)
 #define IMAGE_HEIGHT (512)
 #define IMAGE_SIZE (IMAGE_WIDTH*IMAGE_HEIGHT)
+
+#define CLK_NORM_CNT (15000000)
 
 
 typedef struct {
@@ -80,8 +85,9 @@ typedef struct {
 	uint32_t n_x_offset;        //水平偏移量，采集的时候跳过这么多水平CLK数，
 	uint32_t n_y_offset;        //垂直偏移量，采集的时候跳过这么多行；
 	uint32_t n_fval_set_value; //0=面阵相机；             其他值代表线阵相机，内部自己产生的fval包含行数。                 注：fpga不关心这个值，fx3需要保存上传。
-	uint8_t n_test_mode;        //是否测试图
-	uint8_t Rsv2[11];        //
+	uint16_t n_ddr_line_bytes;// FPGA内部进DDR一行的字节数目（需要16的倍数，方便DDR快速写入）
+	uint8_t Rsv2[10];        //
+
 	uint32_t n_cc1_pwm_high;        //cc1设置的输出pwm的高电平持续时间us
 	uint32_t n_cc1_pwm_low;        //cc1设置的输出pwm的低电平持续时间us
 	uint32_t n_cc1_pwm_cnt;        //cc1设置的本次输出pwm的个数
@@ -99,8 +105,8 @@ typedef struct {
 } tag_grab_config;
 
 
-#define GRAB_PARAM_DEFAULT_VALUE\
-{\
+#define GRAB_PARAM_DEFAULT_VALUE \
+{ \
 	PARAM_VALID_HCODE,\
 	1,\
 	0,\
@@ -158,8 +164,8 @@ extern uint32_t grabsysStatus;
 作者     :
 </PRE>
 *******************************************************************************/
-CyBool_t GrabWriteUserParam(tag_grab_config *pParam, int nIndex);// 存储当前参数到用户区
-CyBool_t GrabReadUserParam(tag_grab_config *pParam, int nIndex);// 读取用户区参数
+CyBool_t GrabWriteUserParam(tag_grab_config *pParam, uint8_t nIndex);// 存储当前参数到用户区
+CyBool_t GrabReadUserParam(tag_grab_config *pParam, uint8_t nIndex);// 读取用户区参数
 
 
 /*function
@@ -187,7 +193,7 @@ CyBool_t GrabGetDefaultUserParam(void);
 功能     : 更新系统灯的状态，需要供外部线程调用
 参数     :
 	   uint32_t *status 状态值指针
-返回值   : 成功 CyTrue 失败CyFalse
+返回值   : void
 抛出异常 :
 --------------------------------------------------------------------------------
 备注     :
@@ -196,7 +202,7 @@ CyBool_t GrabGetDefaultUserParam(void);
 作者     :
 </PRE>
 *******************************************************************************/
-CyBool_t GrabGetSystemStatus(uint32_t *status);
+void GrabGetSystemStatus(void);
 
 /*function
 ********************************************************************************
@@ -214,6 +220,42 @@ CyBool_t GrabGetSystemStatus(uint32_t *status);
 作者     :
 </PRE>
 *******************************************************************************/
-CyBool_t GrabParamCompareandSet(tag_grab_config PcParam);
+CyBool_t GrabParamCompareandSet(tag_grab_config *PcParam);
+
+/*function
+********************************************************************************
+<PRE>
+函数名   :
+功能     : 读一遍寄存器，更新本地的参数
+参数     :
+	void
+返回值   :
+抛出异常 :
+--------------------------------------------------------------------------------
+备注     :
+典型用法 :
+--------------------------------------------------------------------------------
+作者     :
+</PRE>
+*******************************************************************************/
+void GrabParamUpdate(void);
+/*function
+********************************************************************************
+<PRE>
+函数名   :
+功能     : 停止/启动 fpga
+参数     :
+	void
+返回值   :
+抛出异常 :
+--------------------------------------------------------------------------------
+备注     :
+典型用法 :
+--------------------------------------------------------------------------------
+作者     :
+</PRE>
+*******************************************************************************/
+void GrabStopFpgaWork(void);
+void GrabStartFpgaWork(void);
 
 #endif
