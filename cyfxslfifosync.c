@@ -646,30 +646,36 @@ CyFxSlFifoApplnUSBSetupCB(
         else if (bRequest == GET_LINE_CODING )
         {
             /* get current uart config */
+        	grabconfParam.n_uart_baud = glUartConfig.baudRate;
             config_data[0] = glUartConfig.baudRate&(0x000000FF);
             config_data[1] = ((glUartConfig.baudRate&(0x0000FF00))>> 8);
             config_data[2] = ((glUartConfig.baudRate&(0x00FF0000))>>16);
             config_data[3] = ((glUartConfig.baudRate&(0xFF000000))>>24);
             if (glUartConfig.stopBit == CY_U3P_UART_ONE_STOP_BIT)
             {
-                config_data[4] = 0;
+                config_data[4] = 1;
+                grabconfParam.n_uart_stop_bit = 1;
             }
             else /* CY_U3P_UART_TWO_STOP_BIT */
             {
                 config_data[4] = 2;
+                grabconfParam.n_uart_stop_bit = 2;
             }
 
             if (glUartConfig.parity == CY_U3P_UART_EVEN_PARITY)
             {
                 config_data[5] = 2;
+                grabconfParam.n_uart_pority = 2;
             }
             else if (glUartConfig.parity == CY_U3P_UART_ODD_PARITY)
             {
                 config_data[5] = 1;
+                grabconfParam.n_uart_pority = 1;
             }
             else
             {
                 config_data[5] = 0;
+                grabconfParam.n_uart_pority = 0;
             }
             config_data[6] =  0x08;
             status = CyU3PUsbSendEP0Data( 0x07, config_data);

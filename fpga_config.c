@@ -73,7 +73,7 @@ CyBool_t fpga_init(void)
 
 		CyU3PThreadSleep(800);
 		MCUSpiWriteRead(wrBuffer, 1,NULL,0,0);
-//		if(GrabGetDefaultUserParam() == CyFalse){CyU3PDebugPrint(4,"\nUSE DEFALUT PARAM");}
+		if(GrabGetDefaultUserParam() == CyFalse){CyU3PDebugPrint(4,"\nUSE DEFALUT PARAM");}
 		return CyTrue;
         if(fpga_reg_init() == CyFalse)
         {
