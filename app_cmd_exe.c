@@ -297,52 +297,29 @@ CyBool_t exe_flash_select(tagCmdFormatterContent *cmdRecv, tagCmdFormatterConten
 CyBool_t exe_save_user_para(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend)
 {
     fill_command_char(cmdSend, 's', 'v', 'u', 0);
+    uint8_t nIndex = 0;
     //TODO 保存用户配置
-    // TODO :
-    // if ((glbCamParam.nSaveArea == cmdRecv->Params[0]) && (bIsSaveParamIsSame))
-    // {
-    //     return CyTrue;
-    // }
-    // if (cmdRecv->Param_Num > 1)
-    // {
-    //     return CyFalse;
-    // }
-    // else if (cmdRecv->Param_Num == 0)
-    // {
-    //     cmdRecv->Params[0] = glbCamParam, nSaveArea;
-    //     if (cmdRecv->Params[0] >= 3)
-    //     {
-    //         cmdRecv->Params[0] = 0;
-    //     }
-    // }
-    // else if ((cmdRecv->Params[0] == 0xFFFF) && (cmdRecv->Param_Num == 1))
-    // {
-    // TODO :
-    //     if (!StorageWriteFactoryParam(&glbCamParam))
-    //     {
-    //         return CyFalse;
-    //     }
-    //     if (!StorageSetDefaultUserParam(CAM_PARAM_USER_NUMBER))
-    //     {
-    //         return CyFalse;
-    //     }
-    //     glbCamParam.nSaveArea = MAX_COMMAND_PARAM_NUM;
-    //     return CyTrue;
-    // }
-    // if (!StorageWriteUserParam(&glbCamParam, cmdRecv->Params[0]))
-    // {
-    //     return CyFalse;
-    // }
-    // if (!StorageSetDefaultUserParam(cmdRecv->Params[0]))
-    // {
-    //     return CyFalse;
-    // }
-    // else
-    // {
-    //     glbCamParam.nSaveArea = 0xFF & cmdRecv->Params[0];
-    // }
-    // bIsSaveParamIsSame = CyTrue;
-
+    if(cmdRecv->Param_Num == 0)
+    {
+    	nIndex = grabconfParam.n_device_type;
+    	if(CyFalse == GrabWriteUserParam(&grabconfParam,nIndex))
+    	{
+    		return CyFalse;
+    	}
+    }
+    else if(cmdRecv->Param_Num == 1)
+    {
+    	nIndex = *(uint8_t*)(&cmdRecv->Params[0]);
+    	if(CyFalse == GrabWriteUserParam(&grabconfParam,nIndex))
+    	{
+    		return CyFalse;
+    	}
+    }
+    else
+    {
+    	return CyFalse;
+    }
+    cmdSend->Param_Num = 0;
     return CyTrue;
 }
 
@@ -726,7 +703,7 @@ CyBool_t exe_rdwr_grab_param(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 {
 	fill_command_char(cmdSend,'e', 'e', 'm', 'b');
 	int extraParamNum = (sizeof(tag_grab_config)-8) >> 2; // -8 是因为FX3给头加了一个8字节的校验尾，不需要上传
-	tag_grab_config *PcParam = ((tag_grab_config*)(&cmdRecv->Params[0]));
+	tag_grab_config *PcParam = NULL;
 	//读取当前模式用户配置
 	if(cmdRecv->Param_Num == 0)//读配置
 	{
@@ -736,6 +713,7 @@ CyBool_t exe_rdwr_grab_param(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 	}
 	else if(cmdRecv->Param_Num == extraParamNum) //写配置
 	{
+			PcParam = ((tag_grab_config*)(&cmdRecv->Params[0]));
 	        cmdSend->Param_Num = 0;
 	        if(CyFalse == GrabParamCompareandSet(PcParam)) return CyFalse;
 	}
@@ -750,7 +728,12 @@ CyBool_t exe_rdwr_grab_param(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 CyBool_t exe_clear_frame_num(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend)
 {
 	fill_command_char(cmdSend, 'e', 'a', 'i', '\0');
-	//TODO 有多个清零动作，需要确认一下 这些动作走的是否是同一个命令
+	//TODO 帧编号清零
+	uint16_t mainFuncRegValue = 0;
+	SET_BIT(mainFuncRegValue,0);
+	fpga_reg_read(MAIN_FUNCTION_REG_ADDRESS,&mainFuncRegValue,1);
+	cmdSend->Param_Num = 0;
+
 	return CyTrue;
 }
 
@@ -946,7 +929,7 @@ CyBool_t CmdHexExecute(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *
 
     case 42:
     {
-    	//清空帧编号
+    	//帧编号清零
     	return exe_clear_frame_num(cmdRecv,cmdSend);
     }
 

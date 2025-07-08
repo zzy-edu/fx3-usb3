@@ -138,7 +138,6 @@ CyBool_t GrabGetDefaultUserParam(void)
 	//TODO
 	uint8_t nIndex = 0;
 	uint16_t fpga_version = 0;
-	tag_grab_config *tmp = NULL;
 
 	fpga_reg_read(FPGA_VERSION1_REG_ADDRESS,&fpga_version,1);
 	CyU3PDebugPrint(4,"\nfpga_version = %d", fpga_version);
@@ -146,10 +145,9 @@ CyBool_t GrabGetDefaultUserParam(void)
 	{
 	case 0:
 		nIndex = 0;
-		if(CyTrue == GrabReadUserParam(tmp,nIndex))
+		if(CyTrue == GrabReadUserParam(&grabconfParam,nIndex))
 		{
 			CyU3PDebugPrint(4,"\nGrabReadUserParam %dnIndex ok",nIndex);
-			CyU3PMemCopy((uint8_t*)(&grabconfParam),(uint8_t*)tmp,sizeof(tag_grab_config));
 		}
 		else
 		{
@@ -160,10 +158,9 @@ CyBool_t GrabGetDefaultUserParam(void)
 		break;
 	case 1:
 		nIndex = 1;
-		if(CyTrue == GrabReadUserParam(tmp,nIndex))
+		if(CyTrue == GrabReadUserParam(&grabconfParam,nIndex))
 		{
 			CyU3PDebugPrint(4,"\nGrabReadUserParam %dnIndex ok",nIndex);
-			CyU3PMemCopy((uint8_t*)(&grabconfParam),(uint8_t*)tmp,sizeof(tag_grab_config));
 		}
 		else
 		{
@@ -174,10 +171,9 @@ CyBool_t GrabGetDefaultUserParam(void)
 		break;
 	case 2:
 		nIndex = 2;
-		if(CyTrue == GrabReadUserParam(tmp,nIndex))
+		if(CyTrue == GrabReadUserParam(&grabconfParam,nIndex))
 		{
 			CyU3PDebugPrint(4,"\nGrabReadUserParam %dnIndex ok",nIndex);
-			CyU3PMemCopy((uint8_t*)(&grabconfParam),(uint8_t*)tmp,sizeof(tag_grab_config));
 		}
 		else
 		{
@@ -188,10 +184,9 @@ CyBool_t GrabGetDefaultUserParam(void)
 		break;
 	case 3:
 		nIndex = 3;
-		if(CyTrue == GrabReadUserParam(tmp,nIndex))
+		if(CyTrue == GrabReadUserParam(&grabconfParam,nIndex))
 		{
 			CyU3PDebugPrint(4,"\nGrabReadUserParam %dnIndex ok",nIndex);
-			CyU3PMemCopy((uint8_t*)(&grabconfParam),(uint8_t*)tmp,sizeof(tag_grab_config));
 		}
 		else
 		{

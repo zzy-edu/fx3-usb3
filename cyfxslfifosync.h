@@ -39,7 +39,7 @@
 
 
 #define cdc
-#define debug
+//#define debug
 
 // Endpoint and socket definitions for the virtual COM port
 #define CY_FX_EP_PRODUCER_CDC           	(0x02)	// EP 2 OUT

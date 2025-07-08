@@ -349,8 +349,9 @@ void CmdSimpleHexProcess(uint8_t *pBuffer, tagFifoParam *sendFifo)
     {
 		goto exit_CmdSimpleHexProcess;
 	}
-    CyU3PDebugPrint(4,"\npc CheckSum = %d",pBuffer[nLen]);
-    CyU3PDebugPrint(4,"\nfx3 CheckSum = %d",CmdSimpleHexGetCheckSum(pBuffer + 1, nLen - 1));
+//    CyU3PDebugPrint(4,"\npc CheckSum = %d",pBuffer[nLen]);
+//    CyU3PDebugPrint(4,"\nfx3 CheckSum = %d",CmdSimpleHexGetCheckSum(pBuffer + 1, nLen - 1));
+//    CyU3PDebugPrint(4,"hex_cmd = %d\n",hex_cmd);
     CyU3PMemSet(&cmdRecv, 0, sizeof(cmdRecv));
     CyU3PMemSet(&cmdSend, 0, sizeof(cmdSend));
 
