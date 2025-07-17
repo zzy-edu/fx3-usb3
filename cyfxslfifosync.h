@@ -39,7 +39,7 @@
 
 
 #define cdc
-//#define debug
+#define debug
 
 // Endpoint and socket definitions for the virtual COM port
 #define CY_FX_EP_PRODUCER_CDC           	(0x02)	// EP 2 OUT
@@ -105,6 +105,11 @@ extern const uint8_t CyFxUSBStringLangIDDscr[];
 extern const uint8_t CyFxUSBManufactureDscr[];
 extern const uint8_t CyFxUSBProductDscr[];
 
+//Debug
+void CyFxSlFifoApplnStart(
+    void);
+void CyFxSlFifoApplnStop(
+    void);
 #include "cyu3externcend.h"
 
 #endif /* _INCLUDED_CYFXSLFIFOASYNC_H_ */

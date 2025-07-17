@@ -504,13 +504,14 @@ CyFxSlFifoApplnUSBSetupCB(
                 if (glIsApplnActive)
                 {
                 	CyU3PDebugPrint(4,"CY_U3P_USB_SC_CLEAR_FEATURE happened");
-//                	GrabStopFpgaWork();
+                	GrabStopFpgaWork();
                 	CyFxSlFifoApplnStop();
                     /* Give a chance for the main thread loop to run. */
-                    CyU3PThreadSleep (1);
+                    CyU3PThreadSleep(1);
                     CyFxSlFifoApplnStart();
-                    CyU3PUsbStall (wIndex, CyFalse, CyTrue);
-//                    GrabStartFpgaWork();
+                    CyU3PUsbStall(wIndex, CyFalse, CyTrue);
+                    CyU3PThreadSleep(20);
+                    GrabStartFpgaWork();
                     CyU3PUsbAckSetup ();
                     isHandled = CyTrue;
                 }
@@ -736,10 +737,10 @@ void CyFxSlFifoApplnUSBEventCB(
         {
         	CyU3PDebugPrint(4,"CY_U3P_USB_EVENT_SETCONF happened");
             CyFxSlFifoApplnStop();
+		#ifdef cdc
+			CyFxUSBUARTAppStop();
+		#endif
 		#ifdef debug
-			#ifdef cdc
-				CyFxUSBUARTAppStop();
-			#endif
 			CyU3PDebugDeInit(); //避免CDC端点被debug占用，导致重启设备失败
 		#endif
         }
@@ -994,7 +995,7 @@ USBUARTAppThread_Entry (
                has been sent to the host, use the channel wrap-up feature to send any partial buffer to
                the USB host.
             */
-            if (glPktsPending == 0)
+			if (glPktsPending == 0)
             {
                 /* Disable UART Receiver Block */
                 UART->lpp_uart_config = regValueDs;
@@ -1034,7 +1035,7 @@ void SlFifoAppThread_Entry(
             CyU3PThreadSleep(500);
             CyU3PGpioSetValue(FX3_LED_PIN, CyFalse);
             CyU3PThreadSleep(500);
-//            GrabGetSystemStatus();
+            GrabGetSystemStatus();
     }
 }
 

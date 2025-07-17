@@ -258,4 +258,8 @@ void GrabParamUpdate(void);
 void GrabStopFpgaWork(void);
 void GrabStartFpgaWork(void);
 
+
+/*Debug funciton */
+void Debug_manul_reset(void);
+
 #endif

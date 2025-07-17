@@ -29,6 +29,8 @@
 #include "fpga_config.h"
 #include "cyu3system.h"
 
+#include "cyfxslfifosync.h"
+#include "cyu3usb.h"
 // 全局使用的采集参数
 tag_grab_config grabconfParam = GRAB_PARAM_DEFAULT_VALUE;
 
@@ -145,7 +147,7 @@ CyBool_t GrabGetDefaultUserParam(void)
 	}
 
 	fpga_reg_read(FPGA_VERSION1_REG_ADDRESS,&fpga_version,1);
-	CyU3PDebugPrint(4,"\nfpga_version = %d", fpga_version);
+	CyU3PDebugPrint(4,"\nfpga_version = %x", fpga_version);
 	switch(fpga_version)
 	{
 	case 0:
@@ -248,6 +250,7 @@ void GrabGetSystemStatus(void)
 	cl0_fval_cnt = cur_value;
 
 	/* 读cl0_lval_cnt */
+	cur_value = 0;
 	fpga_reg_read(CL0_LVAL_CNT_REG_ADDRESS,(uint16_t*)(&cur_value),2);
 	if(cur_value != cl0_lval_cnt)
 	{
@@ -260,6 +263,7 @@ void GrabGetSystemStatus(void)
 	cl0_lval_cnt = cur_value;
 
 	/* 读cl0_clk_cnt */
+	cur_value = 0;
 	fpga_reg_read(CL0_CLK_CNT_REG_ADDRESS,(uint16_t*)(&cur_value),2);
 	if(cur_value > cl0_clk_cnt)
 	{
@@ -271,13 +275,13 @@ void GrabGetSystemStatus(void)
 		{
 			CLEAR_BIT(grabsysStatus,0);
 		}
-		cl0_lval_cnt = cur_value;
+		cl0_clk_cnt = cur_value;
 	}
 
-
 	/* 读cl1_fval_cnt */
+	cur_value = 0;
 	fpga_reg_read(CL1_FVAL_CNT_REG_ADDRESS,(uint16_t*)(&cur_value),2);
-	if(cur_value != cl0_fval_cnt)
+	if(cur_value != cl1_fval_cnt)
 	{
 		SET_BIT(grabsysStatus,5);
 	}
@@ -288,19 +292,20 @@ void GrabGetSystemStatus(void)
 	cl1_fval_cnt = cur_value;
 
 	/* 读cl1_lval_cnt */
+	cur_value = 0;
 	fpga_reg_read(CL1_LVAL_CNT_REG_ADDRESS,(uint16_t*)(&cur_value),2);
 	if(cur_value != cl1_lval_cnt)
 	{
 		SET_BIT(grabsysStatus,4);
-
 	}
 	else
 	{
-		CLEAR_BIT(grabsysStatus,5);
+		CLEAR_BIT(grabsysStatus,4);
 	}
 	cl1_lval_cnt = cur_value;
 
 	/* 读cl1_clk_cnt */
+	cur_value = 0;
 	fpga_reg_read(CL1_CLK_CNT_REG_ADDRESS,(uint16_t*)(&cur_value),2);
 	if(cur_value > cl1_clk_cnt)
 	{
@@ -315,7 +320,6 @@ void GrabGetSystemStatus(void)
 		cl1_clk_cnt = cur_value;
 	}
 }
-
 
 /*function
 ********************************************************************************
@@ -553,14 +557,17 @@ void GrabParamUpdate(void)
 	fpga_reg_read(DEV_INDEX_REG_ADDRESS,&tmp16Bit,1);
 	grabconfParam.n_dev_index = *(uint8_t *)(&tmp16Bit);
 	/* n_pixel_format */
+	tmp16Bit = 0;
 	fpga_reg_read(PIXEL_FORMAT_REG_ADDRESS,&tmp16Bit,1);
 	grabconfParam.n_pixel_format = *(uint8_t *)(&tmp16Bit);
 
 	/* n_tap_num */
+	tmp16Bit = 0;
 	fpga_reg_read(TAP_NUM_REG_ADDRESS,&tmp16Bit,1);
 	grabconfParam.n_tap_num = *(uint8_t *)(&tmp16Bit);
 
 	/* n_tap_mode */
+	tmp16Bit = 0;
 	fpga_reg_read(TAP_MODE_REG_ADDRESS,&tmp16Bit,1);
 	grabconfParam.n_tap_mode = *(uint8_t *)(&tmp16Bit);
 
@@ -569,87 +576,109 @@ void GrabParamUpdate(void)
 	grabconfParam.n_width = tmp32Bit;
 
 	/* n_height */
+	tmp32Bit = 0;
 	fpga_reg_read(AOI_HEIGHT_0_ADDRESS,(uint16_t *)(&tmp32Bit),2);
 	grabconfParam.n_height = tmp32Bit;
 
 	/* n_len_of_raw */
+	tmp32Bit = 0;
 	fpga_reg_read(LEN_OF_RAW_ADDRESS,(uint16_t *)(&tmp32Bit),2);
 	grabconfParam.n_len_of_raw = tmp32Bit;
 
 	/* n_img_cnt */
+	tmp16Bit = 0;
 	fpga_reg_read(IMG_CNT_REG_ADDRESS,&tmp16Bit,1);
 	grabconfParam.n_img_cnt = *(uint8_t *)(&tmp16Bit);
 
 	/* n_device_type */
+	tmp16Bit = 0;
 	fpga_reg_read(FPGA_VERSION1_REG_ADDRESS,&tmp16Bit,1);
-	grabconfParam.n_device_type = *(uint8_t *)(&tmp16Bit);
+	if(tmp16Bit < 6)
+		grabconfParam.n_device_type = *(uint8_t *)(&tmp16Bit);
 
 	/* nBitCount */
 
 	/* n_cap_channel_num */
+	tmp16Bit = 0;
 	fpga_reg_read(CHANNEL_NUM_REG_ADDRESS,&tmp16Bit,1);
 	grabconfParam.n_cap_channel_num = *(uint8_t *)(&tmp16Bit);
 
 	/* n_dval_lval_mode */
+	tmp16Bit = 0;
 	fpga_reg_read(DVAL_LVAL_MODE_REG_ADDRESS,&tmp16Bit,1);
 	grabconfParam.n_dval_lval_mode = *(uint8_t *)(&tmp16Bit);
 
 	/* n_line_clk_num */
+	tmp32Bit = 0;
 	fpga_reg_read(LINE_CLK_NUM_REG_ADDRESS,(uint16_t *)(&tmp32Bit),2);
 	grabconfParam.n_line_clk_num = tmp32Bit;
 
 	/* n_line_cnt */
+	tmp32Bit = 0;
 	fpga_reg_read(LINE_CNT_REG_ADDRESS,(uint16_t *)(&tmp32Bit),2);
 	grabconfParam.n_line_cnt = tmp32Bit;
 
 	/* n_x_offset */
+	tmp32Bit = 0;
 	fpga_reg_read(X_OFFSET_REG_ADDRESS,(uint16_t *)(&tmp32Bit),2);
 	grabconfParam.n_x_offset = tmp32Bit;
 
 	/* n_y_offset */
+	tmp32Bit = 0;
 	fpga_reg_read(Y_OFFSET_REG_ADDRESS,(uint16_t *)(&tmp32Bit),2);
 	grabconfParam.n_y_offset = tmp32Bit;
 
 	/* n_fval_set_value */
 
 	/* n_ddr_line_bytes */
+	tmp16Bit = 0;
 	fpga_reg_read(LINE_LEN_REG_ADDRESS,&tmp16Bit,1);
 	grabconfParam.n_ddr_line_bytes = *(uint8_t *)(&tmp16Bit);
 
 	/* n_cc1_pwm_high */
+	tmp32Bit = 0;
 	fpga_reg_read(CC1_HIGH_LEVEL_REG_ADDRESS,(uint16_t *)(&tmp32Bit),2);
 	grabconfParam.n_cc1_pwm_high = tmp32Bit;
 
 	/* n_cc1_pwm_low */
+	tmp32Bit = 0;
 	fpga_reg_read(CC1_LOW_LEVEL_REG_ADDRESS,(uint16_t *)(&tmp32Bit),2);
 	grabconfParam.n_cc1_pwm_low = tmp32Bit;
 
 	/* n_cc1_pwm_cnt */
+	tmp32Bit = 0;
 	fpga_reg_read(CC1_NUM_REG_ADDRESS,(uint16_t *)(&tmp32Bit),2);
 	grabconfParam.n_cc1_pwm_cnt = tmp32Bit;
 
 	/* n_cc1_pwm_current */
+	tmp32Bit = 0;
 	fpga_reg_read(CC1_OUT_NUM_REG_ADDRESS,(uint16_t *)(&tmp32Bit),2);
 	grabconfParam.n_cc1_pwm_current = tmp32Bit;
 
 	/*  S1_sel  S2_sel */
+	tmp16Bit = 0;
 	fpga_reg_read(TEST_S1_S2_REG_ADDRESS,&tmp16Bit,1);
 	ptmp = (uint8_t *)(&tmp16Bit);
 	grabconfParam.S1_sel = ptmp[0];
 	grabconfParam.S2_sel = ptmp[1];
 
-	/* flc统计值： 当前值 */
+	/* flc统计值： 当前值  */
+	/* 26个uint32_t 是一组， 16位寄存器，所以需要读42个寄存器， 拷贝的时候是以8bit一个字节进行拷贝，需要104字节 */
+	CyU3PMemSet((uint8_t*)(&tmp32BitArray[0]),0,120);
 	fpga_reg_read(FVAL_STTVALUE_CURRENT_REG_ADDRESS_1,(uint16_t *)(&tmp32BitArray[0]),32);
 	fpga_reg_read(FVAL_STTVALUE_CURRENT_REG_ADDRESS_2,(uint16_t *)(&tmp32BitArray[16]),10);
 	CyU3PMemCopy((uint8_t *)(&grabconfParam.ar_flc_data[0]),(uint8_t *)(&tmp32BitArray[0]),104);
 
 	/* flc统计值： 最大值 */
+	CyU3PMemSet((uint8_t*)(&tmp32BitArray[0]),0,120);
 	fpga_reg_read(FVAL_STTVALUE_MAX_REG_ADDRESS,(uint16_t *)(&tmp32BitArray[0]),42);
 	CyU3PMemCopy((uint8_t *)(&grabconfParam.ar_flc_data[26]),(uint8_t *)(&tmp32BitArray[0]),104);
 	/* flc统计值： 最小值 */
+	CyU3PMemSet((uint8_t*)(&tmp32BitArray[0]),0,120);
 	fpga_reg_read(FVAL_STTVALUE_MIN_REG_ADDRESS,(uint16_t *)(&tmp32BitArray[0]),42);
 	CyU3PMemCopy((uint8_t *)(&grabconfParam.ar_flc_data[52]),(uint8_t *)(&tmp32BitArray[0]),104);
 	/* flc统计值： 波动值 */
+	CyU3PMemSet((uint8_t*)(&tmp32BitArray[0]),0,120);
 	fpga_reg_read(FVAL_STTVALUE_FLUCTUATE_REG_ADDRESS,(uint16_t *)(&tmp32BitArray[0]),42);
 	CyU3PMemCopy((uint8_t *)(&grabconfParam.ar_flc_data[78]),(uint8_t *)(&tmp32BitArray[0]),104);
 }
@@ -678,5 +707,20 @@ void GrabStartFpgaWork(void)
 {
 	uint16_t tmp = 0x1;
 	fpga_reg_write(DDR_OUT_EN_REG_ADDRESS,&tmp,1);
+}
+
+
+/*Debug funciton */
+void Debug_manul_reset(void)
+{
+	GrabStopFpgaWork();
+	CyFxSlFifoApplnStop();
+    /* Give a chance for the main thread loop to run. */
+    CyU3PThreadSleep (1);
+    CyFxSlFifoApplnStart();
+    CyU3PUsbStall (CY_FX_EP_CONSUMER, CyFalse, CyTrue);
+    CyU3PThreadSleep(20);
+    GrabStartFpgaWork();
+    CyU3PUsbAckSetup ();
 }
 
