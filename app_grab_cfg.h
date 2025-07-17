@@ -65,7 +65,10 @@ typedef struct {
 	uint32_t n_height;        //图像高度
 	uint32_t n_len_of_raw;        //当前raw数据部分字节的数目，即有效后面跟着的上传数据的大小。
 	uint64_t n_img_cnt;        //帧编号计数，从0开始一直递增，可以命令清零。
-	uint8_t rsv1[32];        //
+    uint32_t n_real_line_clk_min;// 实际一行的时钟个数，最小值；
+    uint32_t n_real_line_clk_max;// 实际一行的时钟个数，最大值；
+    uint32_t n_real_line_num;// 实际一帧图像采集的行数；
+	uint8_t rsv1[20];        //
 	uint8_t n_device_type;        //采集设备的类型：
 			//    0=Cameralink Full/Full 80（普通图）
 			//        1= Cameralink Full/Full 80（超大图）
@@ -115,6 +118,9 @@ typedef struct {
 	IMAGE_WIDTH,\
 	IMAGE_HEIGHT,\
 	IMAGE_SIZE,\
+	0,\
+	0,\
+	0,\
 	0,\
 	{0,0,0,0,0,0,0,0},\
 	0,\

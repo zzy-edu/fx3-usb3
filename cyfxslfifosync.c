@@ -75,14 +75,19 @@
 #include "fx3_spi.h"
 #include "pib_regs.h"
 #include "fx3_pin_define.h"
+#include "fx3_common.h"
+#include "app_virtual_uart.h"
 #include <cyu3gpio.h>
 #include <uart_regs.h>
 
 /* This file should be included only once as it contains
  * structure definitions. Including it in multiple places
  * can result in linker error. */
+/* 启动线程 */
+CyU3PThread 	slFifoAppThread;          /* Slave FIFO application thread structure */
+/* 串口通信线程，未使用 */
+CyU3PThread     USBUARTAppThread;
 
-CyU3PThread slFifoAppThread;          /* Slave FIFO application thread structure */
 CyU3PDmaChannel glChHandleSlFifoPtoU; /* DMA Channel handle for U2P transfer. */
 CyBool_t glIsApplnActive = CyFalse; /* Whether the loopback application is active or not. */
 uint8_t burstLength = 0;
@@ -93,71 +98,10 @@ uint8_t ledState = 0;
 tagFifoParam glSendFifo __attribute__ ((aligned(32)));
 CyBool_t isControlRun;
 
-
-
-/*CDC相关配置*/
-#ifdef cdc
-CyU3PThread       USBUARTAppThread;
-CyU3PDmaChannel   glChHandleUsbtoUart;          /* DMA AUTO (USB TO UART) channel handle.*/
-CyU3PDmaChannel   glChHandleUarttoUsb;          /* DMA AUTO_SIG(UART TO USB) channel handle.*/
-CyU3PDmaChannel   glChHandleUarttoUart;         /* only test DMA AUTO (UART TO UART) channel handle.*/
-
+/*
+ * 配置串口的结构体，串口助手连接虚拟串口时配置使用
+ */
 CyU3PUartConfig_t glUartConfig = {0};           /* Current UART configuration. */
-volatile uint16_t glPktsPending = 0;            /* Number of packets that have been committed since last check. */
-
-/* CDC Class specific requests to be handled by this application. */
-#define SET_LINE_CODING        0x20
-#define GET_LINE_CODING        0x21
-#define SET_CONTROL_LINE_STATE 0x22
-#endif
-
-#ifdef debug
-CyBool_t glDebugTxEnabled = CyFalse;
-#endif
-
-
-/* Application Error Handler */
-void CyFxAppErrorHandler(
-    CyU3PReturnStatus_t apiRetStatus /* API return status */
-)
-{
-    /* Application failed with the error code apiRetStatus */
-
-    /* Add custom debug or recovery actions here */
-
-    /* Loop Indefinitely */
-    for (;;)
-    {
-        /* Thread sleep : 100 ms */
-        CyU3PGpioSetValue(FX3_LED_PIN, CyTrue);
-        CyU3PThreadSleep(50);
-        CyU3PGpioSetValue(FX3_LED_PIN, CyFalse);
-        CyU3PThreadSleep(50);
-    }
-}
-
-#ifdef debug
-void CheckStatus(char* StringPtr, CyU3PReturnStatus_t Status)
-// In this initial debugging stage I stall on an un-successful system call, else I display progress
-{
-	if (glDebugTxEnabled)				// Need to wait until ConsoleOut is enabled
-	{
-		if (Status == CY_U3P_SUCCESS)
-		{
-			CyU3PDebugPrint(7, "\n%s Successful", StringPtr);
-			return;
-		}
-		// else hang here
-//		DebugPrint(4, "\n%s failed, %d = CY_U3P_ERROR_%s\n", StringPtr, Status, ErrorCodeText(Status));
-		while (1)
-		{
-			CyU3PDebugPrint(4, "?");
-			CyU3PThreadSleep(1000);
-		}
-	}
-}
-#endif
-
 
 
 void
@@ -173,157 +117,6 @@ CyFxUSBGPIFDmaCallback(
         CyU3PDmaChannelCommitBuffer (chHandle, input->buffer_p.count, 0);
     }
 }
-
-
-
-
-#ifdef cdc
-void
-CyFxUSBUARTAppStart(
-        void )
-{
-    uint16_t size = 0;
-    CyU3PEpConfig_t epCfg;
-    CyU3PDmaChannelConfig_t dmaCfg;
-    CyU3PReturnStatus_t apiRetStatus = CY_U3P_SUCCESS;
-    CyU3PUSBSpeed_t usbSpeed = CyU3PUsbGetSpeed();
-
-    /* Based on the Bus speed configure the endpoint packet size */
-    switch (usbSpeed)
-    {
-        case CY_U3P_FULL_SPEED:
-            size = 64;
-            break;
-
-        case CY_U3P_HIGH_SPEED:
-            size = 512;
-            break;
-
-        case  CY_U3P_SUPER_SPEED:
-            /* Turning low power mode off to avoid USB transfer delays. */
-            CyU3PUsbLPMDisable ();
-            size = 1024;
-            break;
-
-        default:
-            CyFxAppErrorHandler (CY_U3P_ERROR_FAILURE);
-            break;
-    }
-
-    CyU3PMemSet ((uint8_t *)&epCfg, 0, sizeof (epCfg));
-    epCfg.enable = CyTrue;
-    epCfg.epType = CY_U3P_USB_EP_BULK;
-    epCfg.burstLen = 1;
-    epCfg.streams = 0;
-    epCfg.pcktSize = size;
-
-    /* Producer endpoint configuration */
-    apiRetStatus = CyU3PSetEpConfig(CY_FX_EP_PRODUCER_CDC , &epCfg);
-    if (apiRetStatus != CY_U3P_SUCCESS)
-    {
-        CyFxAppErrorHandler (apiRetStatus);
-    }
-
-    /* Consumer endpoint configuration */
-    apiRetStatus = CyU3PSetEpConfig(CY_FX_EP_CONSUMER_CDC, &epCfg);
-    if (apiRetStatus != CY_U3P_SUCCESS)
-    {
-        CyFxAppErrorHandler (apiRetStatus);
-    }
-
-    /* Interrupt endpoint configuration */
-    epCfg.epType = CY_U3P_USB_EP_INTR;
-    epCfg.pcktSize = 64;
-    epCfg.isoPkts = 1;
-
-    apiRetStatus = CyU3PSetEpConfig(CY_FX_EP_INTERRUPT_CDC, &epCfg);
-    if (apiRetStatus != CY_U3P_SUCCESS)
-    {
-        CyFxAppErrorHandler(apiRetStatus);
-    }
-
-
-    /* Create a DMA_AUTO channel between usb producer socket and uart consumer socket */
-    dmaCfg.size = size;
-    dmaCfg.count = 8;//CY_FX_USBUART_DMA_BUF_COUNT;
-    dmaCfg.prodSckId = CY_FX_EP_PRODUCER_CDC_SOCKET;    //CY_FX_EP_PRODUCER1_SOCKET;
-    dmaCfg.consSckId = CY_FX_EP_CONSUMER_CDC_SOCKET;   //CY_FX_EP_CONSUMER1_SOCKET;
-    dmaCfg.dmaMode = CY_U3P_DMA_MODE_BYTE;
-    dmaCfg.notification = 0;
-    dmaCfg.cb = NULL;
-    dmaCfg.prodHeader = 0;
-    dmaCfg.prodFooter = 0;
-    dmaCfg.consHeader = 0;
-    dmaCfg.prodAvailCount = 0;
-
-    apiRetStatus = CyU3PDmaChannelCreate (&glChHandleUarttoUart,
-    		CY_U3P_DMA_TYPE_AUTO, &dmaCfg);
-    if (apiRetStatus != CY_U3P_SUCCESS)
-    {
-        CyFxAppErrorHandler(apiRetStatus);
-    }
-
-
-    /* Set DMA Channel transfer size */
-    apiRetStatus = CyU3PDmaChannelSetXfer (&glChHandleUarttoUart,0);
-    if (apiRetStatus != CY_U3P_SUCCESS)
-    {
-        CyFxAppErrorHandler(apiRetStatus);
-    }
-
-    /* Update the status flag. */
-    glIsApplnActive = CyTrue;
-}
-#endif
-
-
-#ifdef cdc
-void
-CyFxUSBUARTAppStop (
-        void)
-{
-    CyU3PEpConfig_t epCfg;
-    CyU3PReturnStatus_t apiRetStatus = CY_U3P_SUCCESS;
-
-    /* Update the flag. */
-    glIsApplnActive = CyFalse;
-
-    /* Flush the endpoint memory */
-    CyU3PUsbFlushEp(CY_FX_EP_PRODUCER_CDC);
-    CyU3PUsbFlushEp(CY_FX_EP_CONSUMER_CDC);
-    CyU3PUsbFlushEp(CY_FX_EP_INTERRUPT_CDC);
-
-    /* Destroy the channel */
-    CyU3PDmaChannelDestroy (&glChHandleUarttoUart);
-
-    /* Disable endpoints. */
-    CyU3PMemSet ((uint8_t *)&epCfg, 0, sizeof (epCfg));
-    epCfg.enable = CyFalse;
-
-    /* Producer endpoint configuration. */
-    apiRetStatus = CyU3PSetEpConfig(CY_FX_EP_PRODUCER_CDC, &epCfg);
-    if (apiRetStatus != CY_U3P_SUCCESS)
-    {
-        CyFxAppErrorHandler (apiRetStatus);
-    }
-
-    /* Consumer endpoint configuration. */
-    apiRetStatus = CyU3PSetEpConfig(CY_FX_EP_CONSUMER_CDC, &epCfg);
-    if (apiRetStatus != CY_U3P_SUCCESS)
-    {
-        CyFxAppErrorHandler (apiRetStatus);
-    }
-
-    /* Interrupt endpoint configuration. */
-    apiRetStatus = CyU3PSetEpConfig(CY_FX_EP_INTERRUPT_CDC, &epCfg);
-    if (apiRetStatus != CY_U3P_SUCCESS)
-    {
-        CyFxAppErrorHandler (apiRetStatus);
-    }
-}
-#endif
-
-
 
 /* This function starts the slave FIFO loop application. This is called
  * when a SET_CONF event is received from the USB host. The endpoints
@@ -640,6 +433,13 @@ CyFxSlFifoApplnUSBSetupCB(
                 {
                     CyU3PMemCopy((uint8_t *)&glUartConfig, (uint8_t *)&uartConfig,
                             sizeof (CyU3PUartConfig_t));
+                    /*
+                     *	将串口配置保存
+                     */
+                    grabconfParam.n_uart_baud = glUartConfig.baudRate;
+                    grabconfParam.n_uart_stop_bit = glUartConfig.stopBit;
+                    grabconfParam.n_uart_pority = glUartConfig.parity;
+
                 }
             }
         }
@@ -647,7 +447,6 @@ CyFxSlFifoApplnUSBSetupCB(
         else if (bRequest == GET_LINE_CODING )
         {
             /* get current uart config */
-        	grabconfParam.n_uart_baud = glUartConfig.baudRate;
             config_data[0] = glUartConfig.baudRate&(0x000000FF);
             config_data[1] = ((glUartConfig.baudRate&(0x0000FF00))>> 8);
             config_data[2] = ((glUartConfig.baudRate&(0x00FF0000))>>16);
@@ -655,28 +454,23 @@ CyFxSlFifoApplnUSBSetupCB(
             if (glUartConfig.stopBit == CY_U3P_UART_ONE_STOP_BIT)
             {
                 config_data[4] = 1;
-                grabconfParam.n_uart_stop_bit = 1;
             }
             else /* CY_U3P_UART_TWO_STOP_BIT */
             {
                 config_data[4] = 2;
-                grabconfParam.n_uart_stop_bit = 2;
             }
 
             if (glUartConfig.parity == CY_U3P_UART_EVEN_PARITY)
             {
                 config_data[5] = 2;
-                grabconfParam.n_uart_pority = 2;
             }
             else if (glUartConfig.parity == CY_U3P_UART_ODD_PARITY)
             {
                 config_data[5] = 1;
-                grabconfParam.n_uart_pority = 1;
             }
             else
             {
                 config_data[5] = 0;
-                grabconfParam.n_uart_pority = 0;
             }
             config_data[6] =  0x08;
             status = CyU3PUsbSendEP0Data( 0x07, config_data);
@@ -688,10 +482,7 @@ CyFxSlFifoApplnUSBSetupCB(
         /* SET_CONTROL_LINE_STATE */
         else if (bRequest == SET_CONTROL_LINE_STATE)
         {
-			#ifdef debug
-        	CheckStatus("Report UART Configuration", status);
-			#endif
-            if (glIsApplnActive)
+            if (glIsCdcInActive)
             {
                 CyU3PUsbAckSetup();
             }
@@ -713,16 +504,6 @@ CyFxSlFifoApplnUSBSetupCB(
     return isHandled;
 }
 
-#ifdef debug
-void DebugInitUsingCDC(void)
-{
-	CyU3PDmaChannelDestroy(&glChHandleUarttoUart);
-	CyU3PDebugInit(CY_FX_EP_CONSUMER_CDC_SOCKET, 8);
-	glDebugTxEnabled = CyTrue;
-	CyU3PDebugPreamble(CyFalse);
-}
-#endif
-
 
 /* This is the callback function to handle the USB events. */
 void CyFxSlFifoApplnUSBEventCB(
@@ -737,22 +518,19 @@ void CyFxSlFifoApplnUSBEventCB(
         {
         	CyU3PDebugPrint(4,"CY_U3P_USB_EVENT_SETCONF happened");
             CyFxSlFifoApplnStop();
-		#ifdef cdc
-			CyFxUSBUARTAppStop();
-		#endif
-		#ifdef debug
-			CyU3PDebugDeInit(); //避免CDC端点被debug占用，导致重启设备失败
-		#endif
         }
+	#ifdef cdc
+		CdcChannelTryStop();
+		if(globUartConfig == CyTrue)
+			CyU3PDebugDeInit(); //避免CDC端点被debug占用，导致重启设备失败
+	#endif
         CyU3PUsbLPMDisable();
         /* Start the loop back function. */
         CyFxSlFifoApplnStart();
 		#ifdef cdc
 			CyFxUSBUARTAppStart();
-		#endif
-
-		#ifdef debug
-			DebugInitUsingCDC();
+			if(globUartConfig == CyTrue)
+				DebugInitUsingCDC();
 		#endif
 
         break;
@@ -760,19 +538,17 @@ void CyFxSlFifoApplnUSBEventCB(
     case CY_U3P_USB_EVENT_RESET:
     case CY_U3P_USB_EVENT_DISCONNECT:
         /* Stop the loop back function. */
-        if (glIsApplnActive)
+        if(glIsApplnActive)
         {
         	CyU3PDebugPrint(4,"CY_U3P_USB_EVENT_DISCONNECT happened");
 			CyFxSlFifoApplnStop();
-
-            #ifdef cdc
-            CyFxUSBUARTAppStop();
-        	#endif
-
-			#ifdef debug
-            CyU3PDebugDeInit();//避免CDC端点被debug占用，导致重启设备失败
-			#endif
         }
+		#ifdef cdc
+		CdcChannelTryStop();
+		if(globUartConfig == CyTrue)
+			CyU3PDebugDeInit();//避免CDC端点被debug占用，导致重启设备失败
+		#endif
+
         break;
 
     default:
@@ -796,7 +572,6 @@ CyFxApplnLPMRqtCB(
 }
 
 
-#ifdef cdc
 void
 CyFxUSBUARTAppInit (
         void )
@@ -830,7 +605,6 @@ CyFxUSBUARTAppInit (
         CyFxAppErrorHandler(apiRetStatus);
     }
 }
-#endif
 
 
 /* This function initializes the GPIF interface and initializes
@@ -845,20 +619,9 @@ void CyFxSlFifoApplnInit(void)
         /* Error Handling */
         CyFxAppErrorHandler(apiRetStatus);
     }
-#ifdef cdc
-    /* Initialize the USBUART Example Application */
-   CyFxUSBUARTAppInit();
-#endif
 
-#ifndef cdc
-     apiRetStatus = CyU3PUartInit();
-     if (apiRetStatus != CY_U3P_SUCCESS)
-     {
-         /* Error Handling */
-         // CyU3PDebugPrint (4, "CyFxSpiInit failed, error code = %d\n", apiRetStatus);
-         CyFxAppErrorHandler(apiRetStatus);
-     }
-#endif
+    /* Initialize the USBUART Example Application */
+    CyFxUSBUARTAppInit();
 
      /* Start the USB functionality. */
      apiRetStatus = CyU3PUsbStart();
@@ -867,9 +630,6 @@ void CyFxSlFifoApplnInit(void)
          // CyU3PDebugPrint (4, "CyU3PUsbStart failed to Start, Error code = %d\n", apiRetStatus);
          CyFxAppErrorHandler(apiRetStatus);
      }
-
-    /* callback to see if there is any overflow of data on the GPIF II side*/
-    //    CyU3PPibRegisterCallback(gpif_error_cb,0xffff);
 
     /* The fast enumeration is the easiest way to setup a USB connection,
      * where all enumeration phase is handled by the library. Only the
@@ -975,6 +735,7 @@ void CyFxSlFifoApplnInit(void)
 }
 
 #ifdef cdc
+volatile uint16_t glPktsPending = 0;            /* Number of packets that have been committed since last check. */
 void
 USBUARTAppThread_Entry (
         uint32_t input)

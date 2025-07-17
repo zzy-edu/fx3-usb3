@@ -24,7 +24,29 @@
 *******************************************************************************/
 
 #include "fx3_common.h"
+#include "fx3_pin_define.h"
+#include "cyu3os.h"
+#include "cyu3gpio.h"
 
+/* Application Error Handler */
+void CyFxAppErrorHandler(
+    CyU3PReturnStatus_t apiRetStatus /* API return status */
+)
+{
+    /* Application failed with the error code apiRetStatus */
+
+    /* Add custom debug or recovery actions here */
+
+    /* Loop Indefinitely */
+    for (;;)
+    {
+        /* Thread sleep : 100 ms */
+        CyU3PGpioSetValue(FX3_LED_PIN, CyTrue);
+        CyU3PThreadSleep(50);
+        CyU3PGpioSetValue(FX3_LED_PIN, CyFalse);
+        CyU3PThreadSleep(50);
+    }
+}
 // 整型数据转换为字符串，并记录字符串长度包括结尾的字符'\0'
 // pdata 输入数据
 // pref  预先开辟好的缓冲区，填入字符,至少11个字节位置

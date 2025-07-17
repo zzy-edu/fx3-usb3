@@ -30,27 +30,12 @@
 #include "cyu3usbconst.h"
 
 
+#define cdc
 
 #define CY_FX_SLFIFO_DMA_TX_SIZE        (0)	                  /* DMA transfer size is set to infinite */
 #define CY_FX_SLFIFO_DMA_RX_SIZE        (0)	                  /* DMA transfer size is set to infinite */
 #define CY_FX_SLFIFO_THREAD_STACK       (0x1000)              /* Slave FIFO application thread stack size */
 #define CY_FX_SLFIFO_THREAD_PRIORITY    (8)                   /* Slave FIFO application thread priority */
-
-
-
-#define cdc
-#define debug
-
-// Endpoint and socket definitions for the virtual COM port
-#define CY_FX_EP_PRODUCER_CDC           	(0x02)	// EP 2 OUT
-#define CY_FX_EP_CONSUMER_CDC           	(0x82)	// EP 2 IN
-#define CY_FX_EP_INTERRUPT_CDC          	(0x83)	// EP 3 INTR
-#define CY_FX_EP_PRODUCER_CDC_SOCKET    	(CY_U3P_UIB_SOCKET_PROD_2)
-#define CY_FX_EP_CONSUMER_CDC_SOCKET    	(CY_U3P_UIB_SOCKET_CONS_2)
-#define CY_FX_EP_INTERRUPT_CDC_SOCKET   	(CY_U3P_UIB_SOCKET_CONS_3)
-#define CY_FX_USBUART_THREAD_PRIORITY		(8)
-#define CY_FX_USBUART_THREAD_STACK			(0x1000)
-
 
 /* Endpoint and socket definitions for the Slave FIFO application */
 
@@ -105,11 +90,9 @@ extern const uint8_t CyFxUSBStringLangIDDscr[];
 extern const uint8_t CyFxUSBManufactureDscr[];
 extern const uint8_t CyFxUSBProductDscr[];
 
-//Debug
-void CyFxSlFifoApplnStart(
-    void);
-void CyFxSlFifoApplnStop(
-    void);
+void CyFxSlFifoApplnStart(void);
+void CyFxSlFifoApplnStop(void);
+
 #include "cyu3externcend.h"
 
 #endif /* _INCLUDED_CYFXSLFIFOASYNC_H_ */

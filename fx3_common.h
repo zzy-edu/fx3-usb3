@@ -15,4 +15,8 @@ void Long2Char(uint32_t r_pData, uint8_t *r_pRef, uint8_t *r_nLength);
 void Char2Long(uint8_t *m_ref, uint32_t *data);
 
 
+void CyFxAppErrorHandler(
+    CyU3PReturnStatus_t apiRetStatus /* API return status */
+);
+
 #endif

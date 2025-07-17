@@ -33,6 +33,7 @@
  */
 
 #include "cyfxslfifosync.h"
+#include "app_virtual_uart.h"
 
 /* Standard device descriptor for USB 3.0 */
 const uint8_t CyFxUSB30DeviceDscr[] __attribute__ ((aligned (32))) =

@@ -6,6 +6,7 @@
 #include "fx3_pin_define.h"
 #include "mcu_spi.h"
 #include "app_grab_cfg.h"
+#include "app_virtual_uart.h"
 
 static CyBool_t inline app_cmd_Str_Cmp(const uint8_t *s1, const uint8_t *s2)
 {
@@ -68,9 +69,21 @@ CyBool_t exe_set_comm_obj(tagCmdFormatterContent *cmdRecv, tagCmdFormatterConten
     }
     else if(cmdRecv->Param_Num == 1)
     {
-
+    	globUartConfig = ((uint8_t)cmdRecv->Params[0] == 1 ? CyTrue : CyFalse);
+    	if(globUartConfig == CyTrue)
+    	{
+    		DebugInitUsingCDC();
+    		CyU3PDebugPrint(4,"\nDebug Channel init ...");
+    		CyU3PDebugPrint(4,"\nDebug Channel ok ...");
+    	}
+    	else
+    	{
+    		CyU3PDebugPrint(4,"\nStart CDC Channel ...");
+    		DebugDeInitStartCDC();
+    	}
+    	return CyTrue;
     }
-    return CyTrue;
+    return CyFalse;
 }
 
 // 设定串口通信的波特率和奇偶校验
@@ -192,7 +205,6 @@ CyBool_t exe_write_para(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent 
 // 得到系统状态,反馈0表示状态正常,其余为错误
 CyBool_t exe_get_status(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend)
 {
-    uint16_t nT;
     fill_command_char(cmdSend, 'g', 's', 0, 0);
     // 返回 grabsysStatus
     cmdSend->Param_Num = 1;
@@ -504,6 +516,7 @@ CyBool_t exe_set_FPGA_reg(tagCmdFormatterContent *cmdRecv, tagCmdFormatterConten
     {
     	//Debug +++
     	Debug_manul_reset();
+    	CyU3PDebugPrint(4,"\n channel reset ok");
     	return CyTrue;
 //        return CyFalse;
     }
@@ -719,7 +732,7 @@ CyBool_t exe_rdwr_grab_param(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 	//读取当前模式用户配置
 	if(cmdRecv->Param_Num == 0)//读配置
 	{
-		//读寄存器更新配置这里还不能开，会把grabconfParam的参数刷为零，除了帧头
+		//回复之前先更新状态
 		GrabParamUpdate();
 		cmdSend->Param_Num = cmdRecv->Param_Num + extraParamNum;
 		CyU3PMemCopy((uint8_t*)(&cmdSend->Params[0]),(uint8_t*)(&grabconfParam),sizeof(tag_grab_config)-8);
