@@ -474,13 +474,15 @@ CyBool_t GrabParamCompareandSet(tag_grab_config *PcParam)
 	/* n_fval_set_value */
 	if(grabconfParam.n_fval_set_value != PcParam->n_fval_set_value){grabconfParam.n_fval_set_value = PcParam->n_fval_set_value;}
 
-	/* n_ddr_line_bytes */
-	if(grabconfParam.n_ddr_line_bytes != PcParam->n_ddr_line_bytes)
-	{
-		grabconfParam.n_ddr_line_bytes = PcParam->n_ddr_line_bytes;
-		/*fpga_reg_write*/
-		fpga_reg_write(LINE_LEN_REG_ADDRESS,&grabconfParam.n_ddr_line_bytes,1);
-	}
+	/* n_ddr_line_bytes
+	 * É¾³ýÁË
+	 */
+//	if(grabconfParam.n_ddr_line_bytes != PcParam->n_ddr_line_bytes)
+//	{
+//		grabconfParam.n_ddr_line_bytes = PcParam->n_ddr_line_bytes;
+//		/*fpga_reg_write*/
+//		fpga_reg_write(LINE_LEN_REG_ADDRESS,&grabconfParam.n_ddr_line_bytes,1);
+//	}
 
 	/* n_cc1_pwm_high */
 	if(grabconfParam.n_cc1_pwm_high != PcParam->n_cc1_pwm_high)
@@ -630,10 +632,12 @@ void GrabParamUpdate(void)
 
 	/* n_fval_set_value */
 
-	/* n_ddr_line_bytes */
-	tmp16Bit = 0;
-	fpga_reg_read(LINE_LEN_REG_ADDRESS,&tmp16Bit,1);
-	grabconfParam.n_ddr_line_bytes = *(uint8_t *)(&tmp16Bit);
+	/* n_ddr_line_bytes
+	 * É¾³ýÁË
+	 */
+//	tmp16Bit = 0;
+//	fpga_reg_read(LINE_LEN_REG_ADDRESS,&tmp16Bit,1);
+//	grabconfParam.n_ddr_line_bytes = *(uint8_t *)(&tmp16Bit);
 
 	/* n_cc1_pwm_high */
 	tmp32Bit = 0;

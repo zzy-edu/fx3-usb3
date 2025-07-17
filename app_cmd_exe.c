@@ -79,7 +79,9 @@ CyBool_t exe_set_comm_obj(tagCmdFormatterContent *cmdRecv, tagCmdFormatterConten
     	else
     	{
     		CyU3PDebugPrint(4,"\nStart CDC Channel ...");
-    		DebugDeInitStartCDC();
+    		CyU3PDebugPrint(4,"\nStart CDC Channel OK, Please Restart Device ...");
+    		/* 目前没法通过程序切换回CDC控制通道 */
+//    		DebugDeInitStartCDC();
     	}
     	return CyTrue;
     }

@@ -173,5 +173,6 @@ void DebugDeInitStartCDC(void)
 {
 	CyU3PDebugDeInit();
 	CdcChannelTryStop();
+	CyU3PThreadSleep(1);
 	CyFxUSBUARTAppStart();
 }

@@ -65,8 +65,8 @@ typedef struct {
 	uint32_t n_height;        //图像高度
 	uint32_t n_len_of_raw;        //当前raw数据部分字节的数目，即有效后面跟着的上传数据的大小。
 	uint64_t n_img_cnt;        //帧编号计数，从0开始一直递增，可以命令清零。
-    uint32_t n_real_line_clk_min;// 实际一行的时钟个数，最小值；
-    uint32_t n_real_line_clk_max;// 实际一行的时钟个数，最大值；
+    uint32_t n_real_line_bytes_min;// 实际一行的放到缓存ddr里面的字节数目，16的倍数，最小值；
+    uint32_t n_real_line_bytes_max;// 实际一行的放到缓存ddr里面的字节数目，16的倍数，最大值；
     uint32_t n_real_line_num;// 实际一帧图像采集的行数；
 	uint8_t rsv1[20];        //
 	uint8_t n_device_type;        //采集设备的类型：
@@ -88,8 +88,8 @@ typedef struct {
 	uint32_t n_x_offset;        //水平偏移量，采集的时候跳过这么多水平CLK数，
 	uint32_t n_y_offset;        //垂直偏移量，采集的时候跳过这么多行；
 	uint32_t n_fval_set_value; //0=面阵相机；             其他值代表线阵相机，内部自己产生的fval包含行数。                 注：fpga不关心这个值，fx3需要保存上传。
-	uint16_t n_ddr_line_bytes;// FPGA内部进DDR一行的字节数目（需要16的倍数，方便DDR快速写入）
-	uint8_t Rsv2[10];        //
+//	uint16_t n_ddr_line_bytes;// FPGA内部进DDR一行的字节数目（需要16的倍数，方便DDR快速写入）
+	uint8_t Rsv2[12];        //
 
 	uint32_t n_cc1_pwm_high;        //cc1设置的输出pwm的高电平持续时间us
 	uint32_t n_cc1_pwm_low;        //cc1设置的输出pwm的低电平持续时间us
@@ -129,7 +129,6 @@ typedef struct {
 	0,\
 	IMAGE_WIDTH,\
 	IMAGE_HEIGHT,\
-	0,\
 	0,\
 	0,\
 	0,\
