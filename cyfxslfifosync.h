@@ -28,7 +28,7 @@
 #include "cyu3externcstart.h"
 #include "cyu3types.h"
 #include "cyu3usbconst.h"
-
+#include "cyu3uart.h"
 
 #define cdc
 
@@ -90,6 +90,7 @@ extern const uint8_t CyFxUSBStringLangIDDscr[];
 extern const uint8_t CyFxUSBManufactureDscr[];
 extern const uint8_t CyFxUSBProductDscr[];
 
+extern CyU3PUartConfig_t glUartConfig;
 void CyFxSlFifoApplnStart(void);
 void CyFxSlFifoApplnStop(void);
 

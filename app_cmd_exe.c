@@ -80,8 +80,9 @@ CyBool_t exe_set_comm_obj(tagCmdFormatterContent *cmdRecv, tagCmdFormatterConten
     	{
     		CyU3PDebugPrint(4,"\nStart CDC Channel ...");
     		CyU3PDebugPrint(4,"\nStart CDC Channel OK, Please Restart Device ...");
+    		CyU3PThreadSleep(10);
     		/* 目前没法通过程序切换回CDC控制通道 */
-//    		DebugDeInitStartCDC();
+    		DebugDeInitStartCDC();
     	}
     	return CyTrue;
     }
@@ -518,7 +519,6 @@ CyBool_t exe_set_FPGA_reg(tagCmdFormatterContent *cmdRecv, tagCmdFormatterConten
     {
     	//Debug +++
     	Debug_manul_reset();
-    	CyU3PDebugPrint(4,"\n channel reset ok");
     	return CyTrue;
 //        return CyFalse;
     }

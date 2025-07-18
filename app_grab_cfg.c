@@ -408,6 +408,13 @@ CyBool_t GrabParamCompareandSet(tag_grab_config *PcParam)
 		fpga_reg_write(LEN_OF_RAW_ADDRESS,(uint16_t *)(&grabconfParam.n_len_of_raw),2);
 	}
 
+	/* n_real_line_bytes_min */
+	if(grabconfParam.n_real_line_bytes_min != PcParam->n_real_line_bytes_min){grabconfParam.n_real_line_bytes_min = PcParam->n_real_line_bytes_min;}
+	/* n_real_line_bytes_max */
+	if(grabconfParam.n_real_line_bytes_max != PcParam->n_real_line_bytes_max){grabconfParam.n_real_line_bytes_max = PcParam->n_real_line_bytes_max;}
+	/* n_real_line_num */
+	if(grabconfParam.n_real_line_num != PcParam->n_real_line_num){grabconfParam.n_real_line_num = PcParam->n_real_line_num;}
+
 	/* n_device_type */
 	if(grabconfParam.n_device_type != PcParam->n_device_type)
 	{
@@ -591,6 +598,10 @@ void GrabParamUpdate(void)
 	tmp16Bit = 0;
 	fpga_reg_read(IMG_CNT_REG_ADDRESS,&tmp16Bit,1);
 	grabconfParam.n_img_cnt = *(uint8_t *)(&tmp16Bit);
+
+	/* n_real_line_bytes_min */
+	/* n_real_line_bytes_max */
+	/* n_real_line_num */
 
 	/* n_device_type */
 	tmp16Bit = 0;

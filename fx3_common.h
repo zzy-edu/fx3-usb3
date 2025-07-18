@@ -18,5 +18,5 @@ void Char2Long(uint8_t *m_ref, uint32_t *data);
 void CyFxAppErrorHandler(
     CyU3PReturnStatus_t apiRetStatus /* API return status */
 );
-
+void DebugLed(int led_frequency_s);
 #endif

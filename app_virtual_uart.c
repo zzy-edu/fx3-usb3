@@ -3,11 +3,50 @@
 #include "cyu3error.h"
 #include "cyu3system.h"
 #include "fx3_common.h"
+#include "cyu3uart.h"
+#include "cyfxslfifosync.h"
+#include "app_grab_cfg.h"
 
 /* 是否打开串口调试 */
 CyBool_t globUartConfig = CyFalse;
 /* Whether the cdc application is active or not. */
 CyBool_t glIsCdcInActive = CyFalse;
+
+
+void
+CyFxUSBUARTAppInit (
+        void )
+
+{
+    CyU3PReturnStatus_t apiRetStatus = CY_U3P_SUCCESS;
+
+    /* Initialize the UART module */
+    apiRetStatus = CyU3PUartInit ();
+    if (apiRetStatus != CY_U3P_SUCCESS)
+    {
+        /* Error handling */
+        CyFxAppErrorHandler(apiRetStatus);
+    }
+
+    /* Configure the UART */
+    CyU3PMemSet ((uint8_t *)&glUartConfig, 0, sizeof (glUartConfig));
+    glUartConfig.baudRate = grabconfParam.n_uart_baud;//CY_U3P_UART_BAUDRATE_115200
+    glUartConfig.stopBit = grabconfParam.n_uart_stop_bit;//CY_U3P_UART_ONE_STOP_BIT
+    glUartConfig.parity = grabconfParam.n_uart_pority;//CY_U3P_UART_NO_PARITY
+    glUartConfig.flowCtrl = CyFalse;
+    glUartConfig.txEnable = CyTrue;
+    glUartConfig.rxEnable = CyTrue;
+    glUartConfig.isDma = CyTrue;
+
+    /* Set the UART configuration */
+    apiRetStatus = CyU3PUartSetConfig (&glUartConfig, NULL);
+    if (apiRetStatus != CY_U3P_SUCCESS )
+    {
+        /* Error handling */
+        CyFxAppErrorHandler(apiRetStatus);
+    }
+}
+
 
 /* cdc 通道初始化 */
 void
@@ -19,6 +58,8 @@ CyFxUSBUARTAppStart(
     CyU3PDmaChannelConfig_t dmaCfg;
     CyU3PReturnStatus_t apiRetStatus = CY_U3P_SUCCESS;
     CyU3PUSBSpeed_t usbSpeed = CyU3PUsbGetSpeed();
+
+    CyFxUSBUARTAppInit();
 
     /* Based on the Bus speed configure the endpoint packet size */
     switch (usbSpeed)
@@ -163,7 +204,13 @@ void CdcChannelTryStop(void)
 // 关闭cdc通道，将cdc的ep consumer作为打印串口
 void DebugInitUsingCDC(void)
 {
+    CyU3PReturnStatus_t apiRetStatus = CY_U3P_SUCCESS;
 	CyU3PDmaChannelDestroy (&glChHandleUarttoUart);
+    apiRetStatus = CyU3PUartDeInit();
+    if ((apiRetStatus != CY_U3P_SUCCESS) && (apiRetStatus != CY_U3P_ERROR_NOT_STARTED))
+    {
+        CyFxAppErrorHandler (apiRetStatus);
+    }
 	CyU3PDebugInit(CY_FX_EP_CONSUMER_CDC_SOCKET, 8);
 	CyU3PDebugPreamble(CyFalse);
 }

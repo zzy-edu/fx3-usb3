@@ -434,7 +434,7 @@ CyFxSlFifoApplnUSBSetupCB(
                     CyU3PMemCopy((uint8_t *)&glUartConfig, (uint8_t *)&uartConfig,
                             sizeof (CyU3PUartConfig_t));
                     /*
-                     *	将串口配置保存
+                     *	保存串口配置
                      */
                     grabconfParam.n_uart_baud = glUartConfig.baudRate;
                     grabconfParam.n_uart_stop_bit = glUartConfig.stopBit;
@@ -572,40 +572,6 @@ CyFxApplnLPMRqtCB(
 }
 
 
-void
-CyFxUSBUARTAppInit (
-        void )
-
-{
-    CyU3PReturnStatus_t apiRetStatus = CY_U3P_SUCCESS;
-
-    /* Initialize the UART module */
-    apiRetStatus = CyU3PUartInit ();
-    if (apiRetStatus != CY_U3P_SUCCESS)
-    {
-        /* Error handling */
-        CyFxAppErrorHandler(apiRetStatus);
-    }
-
-    /* Configure the UART */
-    CyU3PMemSet ((uint8_t *)&glUartConfig, 0, sizeof (glUartConfig));
-    glUartConfig.baudRate = CY_U3P_UART_BAUDRATE_115200;
-    glUartConfig.stopBit = CY_U3P_UART_ONE_STOP_BIT;
-    glUartConfig.parity = CY_U3P_UART_NO_PARITY;
-    glUartConfig.flowCtrl = CyFalse;
-    glUartConfig.txEnable = CyTrue;
-    glUartConfig.rxEnable = CyTrue;
-    glUartConfig.isDma = CyTrue;
-
-    /* Set the UART configuration */
-    apiRetStatus = CyU3PUartSetConfig (&glUartConfig, NULL);
-    if (apiRetStatus != CY_U3P_SUCCESS )
-    {
-        /* Error handling */
-        CyFxAppErrorHandler(apiRetStatus);
-    }
-}
-
 
 /* This function initializes the GPIF interface and initializes
  * the USB interface. */
@@ -620,16 +586,12 @@ void CyFxSlFifoApplnInit(void)
         CyFxAppErrorHandler(apiRetStatus);
     }
 
-    /* Initialize the USBUART Example Application */
-    CyFxUSBUARTAppInit();
-
-     /* Start the USB functionality. */
-     apiRetStatus = CyU3PUsbStart();
-     if (apiRetStatus != CY_U3P_SUCCESS)
-     {
-         // CyU3PDebugPrint (4, "CyU3PUsbStart failed to Start, Error code = %d\n", apiRetStatus);
-         CyFxAppErrorHandler(apiRetStatus);
-     }
+    /* Start the USB functionality. */
+    apiRetStatus = CyU3PUsbStart();
+    if (apiRetStatus != CY_U3P_SUCCESS)
+    {
+        CyFxAppErrorHandler(apiRetStatus);
+    }
 
     /* The fast enumeration is the easiest way to setup a USB connection,
      * where all enumeration phase is handled by the library. Only the

@@ -47,6 +47,18 @@ void CyFxAppErrorHandler(
         CyU3PThreadSleep(50);
     }
 }
+
+void DebugLed(int led_frequency_s)
+{
+	while(1)
+	{
+	    CyU3PGpioSetValue(FX3_LED_PIN, CyTrue);
+	    CyU3PThreadSleep(led_frequency_s);
+	    CyU3PGpioSetValue(FX3_LED_PIN, CyFalse);
+	    CyU3PThreadSleep(led_frequency_s);
+	}
+}
+
 // 整型数据转换为字符串，并记录字符串长度包括结尾的字符'\0'
 // pdata 输入数据
 // pref  预先开辟好的缓冲区，填入字符,至少11个字节位置
