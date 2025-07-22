@@ -59,6 +59,7 @@ CyFxUSBUARTAppStart(
     CyU3PReturnStatus_t apiRetStatus = CY_U3P_SUCCESS;
     CyU3PUSBSpeed_t usbSpeed = CyU3PUsbGetSpeed();
 
+    globUartConfig = CyFalse;
     CyFxUSBUARTAppInit();
 
     /* Based on the Bus speed configure the endpoint packet size */
@@ -158,6 +159,17 @@ CyFxUSBUARTAppStop (
 
     /* Update the flag. */
     glIsCdcInActive = CyFalse;
+    /*
+     * 这里在后续调整完结构之后，不断电重启会跳到CyFxAppErrorHandler
+     * 原因可能是uart init 没有释放再次init了，所以这里关闭cdc通道的时候 deInit一下
+     * 但是 没改结构之前也没调用deInit,唯一区别就是是在UARTSTART和Uartinit调用的先后
+     * todo
+     */
+    apiRetStatus = CyU3PUartDeInit();
+    if ((apiRetStatus != CY_U3P_SUCCESS) && (apiRetStatus != CY_U3P_ERROR_NOT_STARTED))
+    {
+        CyFxAppErrorHandler (apiRetStatus);
+    }
 
     /* Flush the endpoint memory */
     CyU3PUsbFlushEp(CY_FX_EP_PRODUCER_CDC);
@@ -204,6 +216,7 @@ void CdcChannelTryStop(void)
 // 关闭cdc通道，将cdc的ep consumer作为打印串口
 void DebugInitUsingCDC(void)
 {
+	globUartConfig = CyTrue;
     CyU3PReturnStatus_t apiRetStatus = CY_U3P_SUCCESS;
 	CyU3PDmaChannelDestroy (&glChHandleUarttoUart);
     apiRetStatus = CyU3PUartDeInit();
@@ -218,6 +231,7 @@ void DebugInitUsingCDC(void)
 // 关闭调试，打开cdc通道
 void DebugDeInitStartCDC(void)
 {
+	globUartConfig = CyFalse;
 	CyU3PDebugDeInit();
 	CdcChannelTryStop();
 	CyU3PThreadSleep(1);

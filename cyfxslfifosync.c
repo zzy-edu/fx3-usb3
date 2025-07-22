@@ -532,7 +532,6 @@ void CyFxSlFifoApplnUSBEventCB(
 			if(globUartConfig == CyTrue)
 				DebugInitUsingCDC();
 		#endif
-
         break;
 
     case CY_U3P_USB_EVENT_RESET:
