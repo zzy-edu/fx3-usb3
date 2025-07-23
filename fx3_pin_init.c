@@ -69,6 +69,15 @@ CyU3PReturnStatus_t fx3_device_init(void)
     	goto handle_fatal_error;
     }
 
+    status = CyU3PDeviceGpioOverride(FX3_RESET_KEY, CyTrue);
+    if (status != CY_U3P_SUCCESS)
+    {
+    	goto handle_fatal_error;
+    }
+
+    // ≈‰÷√ FX3_RESET_KEYŒ™»ıœ¬¿≠
+    FX3_GCTL_WPD_CFG |= 0x40000000;
+
     return CY_U3P_SUCCESS;
 
 handle_fatal_error:
@@ -130,6 +139,19 @@ CyU3PReturnStatus_t fx3_gpio_init(void)
     gpioConfig.outValue = CyTrue;
     gpioConfig.intrMode = CY_U3P_GPIO_NO_INTR;
     apiRetStatus = CyU3PGpioSetSimpleConfig(FX3_LED_PIN, &gpioConfig);
+    if (apiRetStatus != CY_U3P_SUCCESS)
+    {
+        return apiRetStatus;
+    }
+
+
+    /* FX3_RESET_KEY GPIO config */
+    gpioConfig.inputEn = CyTrue;
+    gpioConfig.driveLowEn = CyFalse;
+    gpioConfig.driveHighEn = CyFalse;
+    gpioConfig.outValue = CyFalse;
+    gpioConfig.intrMode = CY_U3P_GPIO_NO_INTR;
+    apiRetStatus = CyU3PGpioSetSimpleConfig(FX3_RESET_KEY, &gpioConfig);
     if (apiRetStatus != CY_U3P_SUCCESS)
     {
         return apiRetStatus;

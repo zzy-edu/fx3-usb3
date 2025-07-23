@@ -10,6 +10,7 @@
 //#define FPGA_NCE_PIN        26 // CTL  9
 #define FPGA_N_CONFIG_PIN   45 // CTL 10  27
 #define FX3_LED_PIN         60
+#define FX3_RESET_KEY		30
 
 
 #define MCU_SPI_SS2  51 //D2

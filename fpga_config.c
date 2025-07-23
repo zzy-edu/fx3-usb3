@@ -63,9 +63,8 @@ CyBool_t fpga_init(void)
     wrBuffer[0] = 0xab;
     while(i++ < 10)
     {
-//        CyU3PGpioSetValue(FPGA_NCE_PIN, CyTrue);
+
         CyU3PGpioSetValue(FPGA_N_CONFIG_PIN, CyTrue);
-//        CyU3PGpioSetValue(FPGA_NCE_PIN, CyFalse);
         CyU3PThreadSleep(100);
         CyU3PGpioSetValue(FPGA_N_CONFIG_PIN, CyFalse);
         CyU3PThreadSleep(1);

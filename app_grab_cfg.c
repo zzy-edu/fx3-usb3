@@ -43,6 +43,11 @@ uint32_t cl1_fval_cnt = 0;
 uint32_t cl1_lval_cnt = 0;
 uint32_t cl1_clk_cnt = 0;
 
+// fpga clk 状态异常计数
+uint8_t cl1_nolocked_num = 0;
+uint8_t cl2_nolocked_num = 0;
+uint8_t cl3_nolocked_num = 0;
+
 
 /*function
 ********************************************************************************
@@ -325,6 +330,91 @@ void GrabGetSystemStatus(void)
 ********************************************************************************
 <PRE>
 函数名   :
+功能     : 监视fpga clk 状态
+参数     :
+返回值   :
+抛出异常 :
+--------------------------------------------------------------------------------
+备注     :
+典型用法 :
+--------------------------------------------------------------------------------
+作者     :
+</PRE>
+*******************************************************************************/
+void GrabFpgaClkStatusDog(void)
+{
+	uint16_t statusRegvalue = 0;
+	uint16_t tmp16Bit = 0;
+	fpga_reg_read(FPGA_STATUS_REG_ADDRESS,&statusRegvalue,1);
+
+	if((statusRegvalue & 0x01) != 0)
+	{
+		cl1_nolocked_num++;
+		if(cl1_nolocked_num >=3)
+		{
+			cl1_nolocked_num = 0;
+			//todo 复位cl1_clk_pll
+			tmp16Bit = 0x04;
+			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
+			CyU3PThreadSleep(10);
+			tmp16Bit = 0x0;
+			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
+		}
+	}
+	else
+	{
+		cl1_nolocked_num = 0;
+	}
+
+
+	if((statusRegvalue & 0x02) != 0)
+	{
+		cl2_nolocked_num++;
+		if(cl2_nolocked_num >=3)
+		{
+			cl2_nolocked_num = 0;
+			//todo 复位cl2_clk_pll
+			tmp16Bit = 0x08;
+			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
+			CyU3PThreadSleep(10);
+			tmp16Bit = 0x0;
+			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
+		}
+	}
+	else
+	{
+		cl2_nolocked_num = 0;
+	}
+
+	if((statusRegvalue & 0x04) != 0)
+	{
+		cl3_nolocked_num++;
+		if(cl3_nolocked_num >=3)
+		{
+			cl3_nolocked_num = 0;
+			//todo 复位cl3_clk_pll
+			tmp16Bit = 0x10;
+			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
+			CyU3PThreadSleep(10);
+			tmp16Bit = 0x0;
+			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
+		}
+	}
+	else
+	{
+		cl3_nolocked_num = 0;
+	}
+
+}
+
+
+
+
+
+/*function
+********************************************************************************
+<PRE>
+函数名   :
 功能     : 将上位机传下来的配置参数和本地的做比较,配置寄存器
 参数     :
 	tagCameraParam PcParam 上位机下传的配置参数
@@ -491,6 +581,10 @@ CyBool_t GrabParamCompareandSet(tag_grab_config *PcParam)
 //		fpga_reg_write(LINE_LEN_REG_ADDRESS,&grabconfParam.n_ddr_line_bytes,1);
 //	}
 
+	/* n_fpga_version */
+
+	/* n_fx3_version */
+
 	/* n_cc1_pwm_high */
 	if(grabconfParam.n_cc1_pwm_high != PcParam->n_cc1_pwm_high)
 	{
@@ -621,6 +715,12 @@ void GrabParamUpdate(void)
 	fpga_reg_read(DVAL_LVAL_MODE_REG_ADDRESS,&tmp16Bit,1);
 	grabconfParam.n_dval_lval_mode = *(uint8_t *)(&tmp16Bit);
 
+	/* n_fpga_version*/
+	tmp16Bit = 0;
+	tmp32Bit = 0;
+	fpga_reg_read(FPGA_VERSION2_REG_ADDRESS,&tmp16Bit,1);
+	tmp32Bit |= tmp16Bit;
+	grabconfParam.n_fpga_version = tmp32Bit;
 	/* n_line_clk_num */
 	tmp32Bit = 0;
 	fpga_reg_read(LINE_CLK_NUM_REG_ADDRESS,(uint16_t *)(&tmp32Bit),2);
@@ -723,6 +823,7 @@ void GrabStartFpgaWork(void)
 	uint16_t tmp = 0x1;
 	fpga_reg_write(DDR_OUT_EN_REG_ADDRESS,&tmp,1);
 }
+
 
 
 /*Debug funciton */

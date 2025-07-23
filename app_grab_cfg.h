@@ -29,6 +29,7 @@
 
 #include <cyu3error.h>
 #include "flash_map.h"
+#include "version.h"
 
 /*
  * flash 存储结构设定
@@ -68,7 +69,7 @@ typedef struct {
     uint32_t n_real_line_bytes_min;// 实际一行的放到缓存ddr里面的字节数目，16的倍数，最小值；
     uint32_t n_real_line_bytes_max;// 实际一行的放到缓存ddr里面的字节数目，16的倍数，最大值；
     uint32_t n_real_line_num;// 实际一帧图像采集的行数；
-	uint8_t rsv1[20];        //
+	uint8_t Rsv1[20];        //
 	uint8_t n_device_type;        //采集设备的类型：
 			//    0=Cameralink Full/Full 80（普通图）
 			//        1= Cameralink Full/Full 80（超大图）
@@ -89,7 +90,9 @@ typedef struct {
 	uint32_t n_y_offset;        //垂直偏移量，采集的时候跳过这么多行；
 	uint32_t n_fval_set_value; //0=面阵相机；             其他值代表线阵相机，内部自己产生的fval包含行数。                 注：fpga不关心这个值，fx3需要保存上传。
 //	uint16_t n_ddr_line_bytes;// FPGA内部进DDR一行的字节数目（需要16的倍数，方便DDR快速写入）
-	uint8_t Rsv2[12];        //
+	uint32_t n_fpga_version;//fpga 版本
+	uint32_t n_fx3_version;//fx3版本；
+	uint8_t Rsv2[4];//
 
 	uint32_t n_cc1_pwm_high;        //cc1设置的输出pwm的高电平持续时间us
 	uint32_t n_cc1_pwm_low;        //cc1设置的输出pwm的低电平持续时间us
@@ -132,7 +135,9 @@ typedef struct {
 	0,\
 	0,\
 	0,\
-	{0,0,0,0,0,0,0,0,0,0,0},\
+	0,\
+	SOFT_UPDATE_DATE,\
+	{0},\
 	1000,\
 	39000,\
 	0,\
@@ -208,6 +213,23 @@ CyBool_t GrabGetDefaultUserParam(void);
 </PRE>
 *******************************************************************************/
 void GrabGetSystemStatus(void);
+
+/*function
+********************************************************************************
+<PRE>
+函数名   :
+功能     : 监视fpga clk 状态
+参数     :
+返回值   :
+抛出异常 :
+--------------------------------------------------------------------------------
+备注     :
+典型用法 :
+--------------------------------------------------------------------------------
+作者     :
+</PRE>
+*******************************************************************************/
+void GrabFpgaClkStatusDog(void);
 
 /*function
 ********************************************************************************

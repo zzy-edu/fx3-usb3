@@ -606,7 +606,7 @@ const uint8_t CyFxUSBManufactureDscr[] __attribute__ ((aligned (32))) =
 /* Standard product string descriptor */
 const uint8_t CyFxUSBProductDscr[] __attribute__ ((aligned (32))) =
 {
-    0x34,                           /* Descriptor size */
+    0x20,                           /* Descriptor size */
     CY_U3P_USB_STRING_DESCR,        /* Device descriptor type */
     'C',0x00,
     'a',0x00,
@@ -622,17 +622,7 @@ const uint8_t CyFxUSBProductDscr[] __attribute__ ((aligned (32))) =
     'U',0x00,
     'S',0x00,
     'B',0x00,
-    '3',0x00,
-    ' ',0x00,
-    'C',0x00,
-    'o',0x00,
-    'n',0x00,
-    'v',0x00,
-    'e',0x00,
-    'r',0x00,
-    't',0x00,
-    'e',0x00,
-    'r',0x00
+    '3',0x00
 };
 
 /* Place this buffer as the last buffer so that no other variable / code shares

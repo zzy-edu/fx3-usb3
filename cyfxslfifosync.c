@@ -83,10 +83,15 @@
 /* This file should be included only once as it contains
  * structure definitions. Including it in multiple places
  * can result in linker error. */
+
 /* 启动线程 */
 CyU3PThread 	slFifoAppThread;          /* Slave FIFO application thread structure */
 /* 串口通信线程，未使用 */
 CyU3PThread     USBUARTAppThread;
+/* 重启设备 */
+CyU3PThread     RestartAppThread;
+
+CyBool_t restartFlg = CyFalse;
 
 CyU3PDmaChannel glChHandleSlFifoPtoU; /* DMA Channel handle for U2P transfer. */
 CyBool_t glIsApplnActive = CyFalse; /* Whether the loopback application is active or not. */
@@ -519,11 +524,11 @@ void CyFxSlFifoApplnUSBEventCB(
         	CyU3PDebugPrint(4,"CY_U3P_USB_EVENT_SETCONF happened");
             CyFxSlFifoApplnStop();
         }
-	#ifdef cdc
+		#ifdef cdc
 		CdcChannelTryStop();
 		if(globUartConfig == CyTrue)
 			CyU3PDebugDeInit(); //避免CDC端点被debug占用，导致重启设备失败
-	#endif
+		#endif
         CyU3PUsbLPMDisable();
         /* Start the loop back function. */
         CyFxSlFifoApplnStart();
@@ -736,11 +741,11 @@ USBUARTAppThread_Entry (
 }
 #endif
 
-
 /* Entry function for the slFifoAppThread. */
 void SlFifoAppThread_Entry(
     uint32_t input)
 {
+
     // Initialize the send message buffer
     FifoInitial(&glSendFifo, glFifoBuffer, FIFO_DEEPTH_MAX_VALUE, sizeof(FIFO_DATA));
     /* Initialize the slave FIFO application */
@@ -758,8 +763,105 @@ void SlFifoAppThread_Entry(
             CyU3PGpioSetValue(FX3_LED_PIN, CyFalse);
             CyU3PThreadSleep(500);
             GrabGetSystemStatus();
+            while(restartFlg)
+            {
+            	CyU3PThreadSleep(10);
+            }
     }
 }
+
+void
+RestartAppThread_Entry (
+        uint32_t input)
+{
+	CyBool_t gpio_value = CyFalse;
+	uint8_t key2num = 0;
+
+    for (;;)
+    {
+        CyU3PGpioGetValue(FX3_RESET_KEY,&gpio_value);
+        if(gpio_value == CyTrue)
+        {
+        	CyU3PDebugPrint(4,"\n reset key 1");
+        	gpio_value = CyFalse;
+        	CyU3PThreadSleep(2000);
+        	CyU3PGpioGetValue(FX3_RESET_KEY,&gpio_value);
+        	if(gpio_value == CyTrue)
+        	{
+        		CyU3PDebugPrint(4,"\n reset key 2");
+        		while(1)
+        		{
+        			CyU3PGpioGetValue(FX3_RESET_KEY,&gpio_value);
+        			if(gpio_value == CyFalse)
+        			{
+        				restartFlg = CyTrue;
+        				key2num = 0;
+        				break;
+        			}
+        			else
+        			{
+        				key2num++;
+        				CyU3PThreadSleep(100);
+        				if(key2num >= 50)
+        				{
+        					key2num = 0;
+        					break;
+        				}
+        			}
+        		}
+        		if(restartFlg)
+        		{
+        			GrabStopFpgaWork();
+    	        	CyU3PDebugPrint(4,"\nRestart USB' Grab Device ...");
+        	        if (glIsApplnActive)
+        	        {
+        	            CyFxSlFifoApplnStop();
+        	        }
+					#ifdef cdc
+        			CdcChannelTryStop();
+        			if(globUartConfig == CyTrue)
+        				CyU3PDebugDeInit(); //避免CDC端点被debug占用，导致重启设备失败
+					#endif
+        	        CyU3PUsbLPMDisable();
+        	        /* Start the loop back function. */
+        	        CyFxSlFifoApplnStart();
+        			#ifdef cdc
+        				CyFxUSBUARTAppStart();
+        				if(globUartConfig == CyTrue)
+        					DebugInitUsingCDC();
+        			#endif
+
+					if(CyFalse == fpga_init())
+					{
+						CyFxAppErrorHandler(0);
+					}
+					GrabStartFpgaWork();
+        			CyU3PThreadSleep(10000);
+        			restartFlg = CyFalse;
+        			CyU3PDebugPrint(4,"\nRestart USB' Grab Device ..ok");
+        		}
+        		else
+        		{
+            		CyU3PDebugPrint(4,"\n reset key 2, continue");
+            		CyU3PThreadSleep(500);
+        		}
+
+        	}
+        	else
+        	{
+        		CyU3PDebugPrint(4,"\n reset key 1, continue");
+        		CyU3PThreadSleep(1000);
+        	}
+        }
+        else
+        {
+        	//todo 做一个开门狗，监视fpga状态作复位
+        	GrabFpgaClkStatusDog();
+        	CyU3PThreadSleep(1000);
+        }
+    }
+}
+
 
 /* Application define function which creates the threads. */
 void CyFxApplicationDefine(
@@ -796,17 +898,17 @@ void CyFxApplicationDefine(
         while (1);
     }
 
-#ifdef cdc1
+
     void *ptr1 = NULL;
     ptr1 = CyU3PMemAlloc(CY_FX_SLFIFO_THREAD_STACK);
-    retThrdCreate = CyU3PThreadCreate (&USBUARTAppThread,          /* USBUART Example App Thread structure */
-                "21:USBUART_DMA_mode",                   /* Thread ID and Thread name */
-                USBUARTAppThread_Entry,                  /* USBUART Example App Thread Entry function */
+    retThrdCreate = CyU3PThreadCreate (&RestartAppThread,          /* USBUART Example App Thread structure */
+                "22:Restart_App",                   /* Thread ID and Thread name */
+                RestartAppThread_Entry,                  /* USBUART Example App Thread Entry function */
                 0,                                       /* No input parameter to thread */
                 ptr1,                                     /* Pointer to the allocated thread stack */
-                CY_FX_USBUART_THREAD_STACK,               /* USBUART Example App Thread stack size */
-                CY_FX_USBUART_THREAD_PRIORITY,            /* USBUART Example App Thread priority */
-                CY_FX_USBUART_THREAD_PRIORITY,            /* USBUART Example App Thread priority */
+                CY_FX_SLFIFO_THREAD_STACK,               /* USBUART Example App Thread stack size */
+                CY_FX_SLFIFO_THREAD_PRIORITY,            /* USBUART Example App Thread priority */
+                CY_FX_SLFIFO_THREAD_PRIORITY,            /* USBUART Example App Thread priority */
                 CYU3P_NO_TIME_SLICE,                     /* No time slice for the application thread */
                 CYU3P_AUTO_START                         /* Start the Thread immediately */
                 );
@@ -816,7 +918,6 @@ void CyFxApplicationDefine(
             /* Loop indefinitely */
             while(1);
         }
-#endif
 }
 
 /*
