@@ -347,17 +347,18 @@ void GrabFpgaClkStatusDog(void)
 	uint16_t tmp16Bit = 0;
 	fpga_reg_read(FPGA_STATUS_REG_ADDRESS,&statusRegvalue,1);
 
-	if((statusRegvalue & 0x01) != 0)
+	if((statusRegvalue & 0x01) == 0)
 	{
 		cl1_nolocked_num++;
 		if(cl1_nolocked_num >=3)
 		{
 			cl1_nolocked_num = 0;
 			//todo 复位cl1_clk_pll
-			tmp16Bit = 0x04;
+			fpga_reg_read(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
+			SET_BIT(tmp16Bit,2);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
-			CyU3PThreadSleep(10);
-			tmp16Bit = 0x0;
+			CyU3PThreadSleep(1);
+			CLEAR_BIT(tmp16Bit,2);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 		}
 	}
@@ -367,17 +368,18 @@ void GrabFpgaClkStatusDog(void)
 	}
 
 
-	if((statusRegvalue & 0x02) != 0)
+	if((statusRegvalue & 0x02) == 0)
 	{
 		cl2_nolocked_num++;
 		if(cl2_nolocked_num >=3)
 		{
 			cl2_nolocked_num = 0;
 			//todo 复位cl2_clk_pll
-			tmp16Bit = 0x08;
+			fpga_reg_read(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
+			SET_BIT(tmp16Bit,3);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
-			CyU3PThreadSleep(10);
-			tmp16Bit = 0x0;
+			CyU3PThreadSleep(1);
+			CLEAR_BIT(tmp16Bit,3);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 		}
 	}
@@ -386,17 +388,18 @@ void GrabFpgaClkStatusDog(void)
 		cl2_nolocked_num = 0;
 	}
 
-	if((statusRegvalue & 0x04) != 0)
+	if((statusRegvalue & 0x04) == 0)
 	{
 		cl3_nolocked_num++;
 		if(cl3_nolocked_num >=3)
 		{
 			cl3_nolocked_num = 0;
 			//todo 复位cl3_clk_pll
-			tmp16Bit = 0x10;
+			fpga_reg_read(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
+			SET_BIT(tmp16Bit,4);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
-			CyU3PThreadSleep(10);
-			tmp16Bit = 0x0;
+			CyU3PThreadSleep(1);
+			CLEAR_BIT(tmp16Bit,4);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 		}
 	}
@@ -404,12 +407,7 @@ void GrabFpgaClkStatusDog(void)
 	{
 		cl3_nolocked_num = 0;
 	}
-
 }
-
-
-
-
 
 /*function
 ********************************************************************************
@@ -654,7 +652,8 @@ void GrabParamUpdate(void)
 	uint8_t *ptmp = NULL;
 	uint16_t tmp16Bit = 0;
 	uint32_t tmp32Bit = 0;
-	uint32_t tmp32BitArray[30] = {0};
+	uint64_t tmp64Bit = 0;
+	uint16_t tmp16BitArray[60] = {0};
 
 	/* n_dev_index */
 	fpga_reg_read(DEV_INDEX_REG_ADDRESS,&tmp16Bit,1);
@@ -690,8 +689,8 @@ void GrabParamUpdate(void)
 
 	/* n_img_cnt */
 	tmp16Bit = 0;
-	fpga_reg_read(IMG_CNT_REG_ADDRESS,&tmp16Bit,1);
-	grabconfParam.n_img_cnt = *(uint8_t *)(&tmp16Bit);
+	fpga_reg_read(IMG_CNT_REG_ADDRESS,(uint16_t *)&tmp64Bit,4);
+	grabconfParam.n_img_cnt = tmp64Bit;
 
 	/* n_real_line_bytes_min */
 	/* n_real_line_bytes_max */
@@ -721,6 +720,7 @@ void GrabParamUpdate(void)
 	fpga_reg_read(FPGA_VERSION2_REG_ADDRESS,&tmp16Bit,1);
 	tmp32Bit |= tmp16Bit;
 	grabconfParam.n_fpga_version = tmp32Bit;
+
 	/* n_line_clk_num */
 	tmp32Bit = 0;
 	fpga_reg_read(LINE_CLK_NUM_REG_ADDRESS,(uint16_t *)(&tmp32Bit),2);
@@ -778,24 +778,28 @@ void GrabParamUpdate(void)
 	grabconfParam.S2_sel = ptmp[1];
 
 	/* flc统计值： 当前值  */
-	/* 26个uint32_t 是一组， 16位寄存器，所以需要读42个寄存器， 拷贝的时候是以8bit一个字节进行拷贝，需要104字节 */
-	CyU3PMemSet((uint8_t*)(&tmp32BitArray[0]),0,120);
-	fpga_reg_read(FVAL_STTVALUE_CURRENT_REG_ADDRESS_1,(uint16_t *)(&tmp32BitArray[0]),32);
-	fpga_reg_read(FVAL_STTVALUE_CURRENT_REG_ADDRESS_2,(uint16_t *)(&tmp32BitArray[16]),10);
-	CyU3PMemCopy((uint8_t *)(&grabconfParam.ar_flc_data[0]),(uint8_t *)(&tmp32BitArray[0]),104);
+	/* 26个uint32_t 是一组， 16位寄存器，所以需要读52个寄存器， 拷贝的时候是以8bit一个字节进行拷贝，需要104字节 */
+	CyU3PMemSet((uint8_t*)tmp16BitArray,0,120);
+	fpga_reg_read(FVAL_STTVALUE_CURRENT_REG_ADDRESS_1,tmp16BitArray,32);
+	fpga_reg_read(FVAL_STTVALUE_CURRENT_REG_ADDRESS_2,&tmp16BitArray[32],20);
+	CyU3PMemCopy((uint8_t *)(&grabconfParam.ar_flc_data[0]),(uint8_t *)tmp16BitArray,104);
 
 	/* flc统计值： 最大值 */
-	CyU3PMemSet((uint8_t*)(&tmp32BitArray[0]),0,120);
-	fpga_reg_read(FVAL_STTVALUE_MAX_REG_ADDRESS,(uint16_t *)(&tmp32BitArray[0]),42);
-	CyU3PMemCopy((uint8_t *)(&grabconfParam.ar_flc_data[26]),(uint8_t *)(&tmp32BitArray[0]),104);
+	CyU3PMemSet((uint8_t*)tmp16BitArray,0,120);
+	fpga_reg_read(FVAL_STTVALUE_MAX_REG_ADDRESS,(uint16_t *)tmp16BitArray,52);
+	CyU3PMemCopy((uint8_t *)(&grabconfParam.ar_flc_data[26]),(uint8_t *)tmp16BitArray,104);
+
 	/* flc统计值： 最小值 */
-	CyU3PMemSet((uint8_t*)(&tmp32BitArray[0]),0,120);
-	fpga_reg_read(FVAL_STTVALUE_MIN_REG_ADDRESS,(uint16_t *)(&tmp32BitArray[0]),42);
-	CyU3PMemCopy((uint8_t *)(&grabconfParam.ar_flc_data[52]),(uint8_t *)(&tmp32BitArray[0]),104);
+	CyU3PMemSet((uint8_t*)tmp16BitArray,0,120);
+	fpga_reg_read(FVAL_STTVALUE_MIN_REG_ADDRESS,(uint16_t *)tmp16BitArray,52);
+	CyU3PMemCopy((uint8_t *)(&grabconfParam.ar_flc_data[52]),(uint8_t *)tmp16BitArray,104);
+
 	/* flc统计值： 波动值 */
-	CyU3PMemSet((uint8_t*)(&tmp32BitArray[0]),0,120);
-	fpga_reg_read(FVAL_STTVALUE_FLUCTUATE_REG_ADDRESS,(uint16_t *)(&tmp32BitArray[0]),42);
-	CyU3PMemCopy((uint8_t *)(&grabconfParam.ar_flc_data[78]),(uint8_t *)(&tmp32BitArray[0]),104);
+	CyU3PMemSet((uint8_t*)tmp16BitArray,0,120);
+	fpga_reg_read(FVAL_STTVALUE_FLUCTUATE_REG_ADDRESS,(uint16_t *)tmp16BitArray,52);
+	CyU3PMemCopy((uint8_t *)(&grabconfParam.ar_flc_data[78]),(uint8_t *)tmp16BitArray,104);
+
+
 }
 /*function
 ********************************************************************************
@@ -824,7 +828,33 @@ void GrabStartFpgaWork(void)
 	fpga_reg_write(DDR_OUT_EN_REG_ADDRESS,&tmp,1);
 }
 
-
+/*function
+********************************************************************************
+<PRE>
+函数名   :
+功能     : 1s一次flc触发信号，更新当前值
+参数     :
+	void
+返回值   :
+抛出异常 :
+--------------------------------------------------------------------------------
+备注     :
+典型用法 :
+--------------------------------------------------------------------------------
+作者     :
+</PRE>
+*******************************************************************************/
+void GrabTriggerFlcBitAndUpdate(void)
+{
+	uint16_t mFuncRegValue = 0;
+	fpga_reg_read(MAIN_FUNCTION_REG_ADDRESS,&mFuncRegValue,1);
+	SET_BIT(mFuncRegValue,6);
+	fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&mFuncRegValue,1);
+	CyU3PThreadSleep(1);
+	CLEAR_BIT(mFuncRegValue,6);
+	fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&mFuncRegValue,1);
+	GrabParamUpdate();
+}
 
 /*Debug funciton */
 void Debug_manul_reset(void)

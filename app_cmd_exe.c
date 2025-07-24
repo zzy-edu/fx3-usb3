@@ -607,6 +607,7 @@ CyBool_t exe_get_FPGA_reg(tagCmdFormatterContent *cmdRecv, tagCmdFormatterConten
         cmdSend->Param_Num = 2;
         cmdSend->Params[0] = cmdRecv->Params[0];
         fpga_reg_read((uint16_t)cmdRecv->Params[0], (uint16_t *)&cmdSend->Params[1], 1);
+        CyU3PDebugPrint(4,"\nreg:%x,value:%x",(uint16_t)cmdRecv->Params[0],(uint16_t)cmdSend->Params[1]);
     }
     else if (cmdRecv->Param_Num == 2)
     {
@@ -735,7 +736,8 @@ CyBool_t exe_rdwr_grab_param(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 	if(cmdRecv->Param_Num == 0)//读配置
 	{
 		//回复之前先更新状态
-		GrabParamUpdate();
+		// 移到线程中，1s触发1次flc 在更新,这边要的直接拷贝
+//		GrabParamUpdate();
 		cmdSend->Param_Num = cmdRecv->Param_Num + extraParamNum;
 		CyU3PMemCopy((uint8_t*)(&cmdSend->Params[0]),(uint8_t*)(&grabconfParam),sizeof(tag_grab_config)-8);
 	}
@@ -753,7 +755,7 @@ CyBool_t exe_rdwr_grab_param(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 	return CyTrue;
 }
 
-/* 计数值清零，param[0] 0x0001 帧编号清零， 0x0002 ccl输出计数清零 , 0x0020 flc清零， 0x0040 flc触发输出， 0x8000 ddr复位 */
+/* 计数值清零，param[0] 0x0001 帧编号清零， 0x0002 ccl输出计数清零 , 0x0004 cl1_clk_pll 0x0008 cl2_clk_pll 0x0010 cl3_clk_pll 0x0020 flc清零， 0x0040 flc触发输出， 0x8000 ddr复位 */
 CyBool_t exe_clear_count_num(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend)
 {
 	fill_command_char(cmdSend, 'e', 'a', 'i', '\0');
@@ -761,22 +763,22 @@ CyBool_t exe_clear_count_num(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 	//TODO 计数值清零
 	if(cmdRecv->Param_Num == 1)
 	{
-		mainFuncRegValue = (uint16_t)(cmdRecv->Params[0]);
-		fpga_reg_read(MAIN_FUNCTION_REG_ADDRESS,&mainFuncRegValue,1);
-		//延时10ms,将寄存器复位
-		CyU3PThreadSleep(10);
-		mainFuncRegValue = 0;
-		fpga_reg_read(MAIN_FUNCTION_REG_ADDRESS,&mainFuncRegValue,1);
+		mainFuncRegValue |= (uint16_t)(cmdRecv->Params[0]);
+		fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&mainFuncRegValue,1);
+		//延时1ms,将寄存器复位
+		CyU3PThreadSleep(1);
+		mainFuncRegValue &= (~((uint16_t)(cmdRecv->Params[0])));
+		fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&mainFuncRegValue,1);
 	}
 	// 如果不带参或者参数个数不为1,就是全清
 	else
 	{
-		mainFuncRegValue = 0x8063;
-		fpga_reg_read(MAIN_FUNCTION_REG_ADDRESS,&mainFuncRegValue,1);
-		//延时10ms,将寄存器复位
-		CyU3PThreadSleep(10);
+		mainFuncRegValue = 0x807F;
+		fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&mainFuncRegValue,1);
+		//延时1ms,将寄存器复位
+		CyU3PThreadSleep(1);
 		mainFuncRegValue = 0;
-		fpga_reg_read(MAIN_FUNCTION_REG_ADDRESS,&mainFuncRegValue,1);
+		fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&mainFuncRegValue,1);
 	}
 	cmdSend->Param_Num = 0;
 
@@ -794,6 +796,17 @@ CyBool_t exe_set_test_mode(tagCmdFormatterContent *cmdRecv, tagCmdFormatterConte
 	}
 	CyU3PDebugPrint(4,"\nParam_Num error");
 	return CyFalse;
+}
+
+
+/* 启动 停止触发*/
+CyBool_t exe_set_trigger(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend)
+{
+	fill_command_char(cmdSend, 's', 't', 'r', 'i');
+	//todo 参数个数为1 直接写寄存器就行
+	cmdSend->Param_Num = 0;
+
+	return CyTrue;
 }
 
 cmd_tag_t cmd_tag[] __attribute__((aligned(32))) =
@@ -839,7 +852,8 @@ cmd_tag_t cmd_tag[] __attribute__((aligned(32))) =
         {58, {'s', 'i', 'o', 0}},   //设置io管脚的值
         {59, {'s', 't', 'i', 'o'}},   //初始化io管脚的类型
         {60, {'g', 'i', 'o', 0}},   //获取io管脚的值
-
+        // NOTE: +++
+        {80,{'s','t','r','i'}},
         //NOTE : +++
         {91, {'s', 't', 'm', 'd'}}, //测试图模式
 
@@ -1008,7 +1022,11 @@ CyBool_t CmdHexExecute(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *
 		// 获取io管脚的值
 		return exe_get_io(cmdRecv, cmdSend);
 	}
-
+    case 80:
+    {
+    	//启动/停止触发
+    	return exe_set_trigger(cmdRecv,cmdSend);
+    }
     case 91:
     {
     	//测试图模式

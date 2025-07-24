@@ -56,12 +56,7 @@ CyU3PReturnStatus_t fx3_device_init(void)
     {
         goto handle_fatal_error;
     }
-    /* GPIO 20 */
-//    status = CyU3PDeviceGpioOverride(FPGA_SPI_CS, CyTrue);
-//    if (status != CY_U3P_SUCCESS)
-//    {
-//    	goto handle_fatal_error;
-//    }
+
     /* GPIO 22 */
     status = CyU3PDeviceGpioOverride(FPGA_RESET_PIN, CyTrue);
     if (status != CY_U3P_SUCCESS)

@@ -92,6 +92,7 @@ CyU3PThread     USBUARTAppThread;
 CyU3PThread     RestartAppThread;
 
 CyBool_t restartFlg = CyFalse;
+CyBool_t restartKey = CyFalse;
 
 CyU3PDmaChannel glChHandleSlFifoPtoU; /* DMA Channel handle for U2P transfer. */
 CyBool_t glIsApplnActive = CyFalse; /* Whether the loopback application is active or not. */
@@ -763,12 +764,52 @@ void SlFifoAppThread_Entry(
             CyU3PGpioSetValue(FX3_LED_PIN, CyFalse);
             CyU3PThreadSleep(500);
             GrabGetSystemStatus();
-            while(restartFlg)
+            GrabTriggerFlcBitAndUpdate();
+            while(restartFlg || restartKey)
             {
             	CyU3PThreadSleep(10);
             }
     }
 }
+
+
+void RestartDevice(void)
+{
+	restartFlg = CyTrue;
+	//清空fifo
+	FifoFlush(&glSendFifo);
+	// fx3 通道重置
+	GrabStopFpgaWork();
+	CyU3PDebugPrint(4,"\nRestart USB' Grab Device ...");
+    if (glIsApplnActive)
+    {
+        CyFxSlFifoApplnStop();
+    }
+	#ifdef cdc
+	CdcChannelTryStop();
+	if(globUartConfig == CyTrue)
+		CyU3PDebugDeInit(); //避免CDC端点被debug占用，导致重启设备失败
+	#endif
+    CyU3PUsbLPMDisable();
+    /* Start the loop back function. */
+    CyFxSlFifoApplnStart();
+	#ifdef cdc
+		CyFxUSBUARTAppStart();
+		if(globUartConfig == CyTrue)
+			DebugInitUsingCDC();
+	#endif
+	// fpga_Reinit
+	if(CyFalse == fpga_Reinit())
+	{
+		CyFxAppErrorHandler(0);
+	}
+	GrabStartFpgaWork();
+
+	CyU3PThreadSleep(10000);
+	restartFlg = CyFalse;
+	CyU3PDebugPrint(4,"\nRestart USB' Grab Device ...ok");
+}
+
 
 void
 RestartAppThread_Entry (
@@ -777,88 +818,64 @@ RestartAppThread_Entry (
 	CyBool_t gpio_value = CyFalse;
 	uint8_t key2num = 0;
 
-    for (;;)
+    for(;;)
     {
-        CyU3PGpioGetValue(FX3_RESET_KEY,&gpio_value);
-        if(gpio_value == CyTrue)
-        {
-        	CyU3PDebugPrint(4,"\n reset key 1");
-        	gpio_value = CyFalse;
-        	CyU3PThreadSleep(2000);
-        	CyU3PGpioGetValue(FX3_RESET_KEY,&gpio_value);
-        	if(gpio_value == CyTrue)
-        	{
-        		CyU3PDebugPrint(4,"\n reset key 2");
-        		while(1)
-        		{
-        			CyU3PGpioGetValue(FX3_RESET_KEY,&gpio_value);
-        			if(gpio_value == CyFalse)
-        			{
-        				restartFlg = CyTrue;
-        				key2num = 0;
-        				break;
-        			}
-        			else
-        			{
-        				key2num++;
-        				CyU3PThreadSleep(100);
-        				if(key2num >= 50)
-        				{
-        					key2num = 0;
-        					break;
-        				}
-        			}
-        		}
-        		if(restartFlg)
-        		{
-        			GrabStopFpgaWork();
-    	        	CyU3PDebugPrint(4,"\nRestart USB' Grab Device ...");
-        	        if (glIsApplnActive)
-        	        {
-        	            CyFxSlFifoApplnStop();
-        	        }
-					#ifdef cdc
-        			CdcChannelTryStop();
-        			if(globUartConfig == CyTrue)
-        				CyU3PDebugDeInit(); //避免CDC端点被debug占用，导致重启设备失败
-					#endif
-        	        CyU3PUsbLPMDisable();
-        	        /* Start the loop back function. */
-        	        CyFxSlFifoApplnStart();
-        			#ifdef cdc
-        				CyFxUSBUARTAppStart();
-        				if(globUartConfig == CyTrue)
-        					DebugInitUsingCDC();
-        			#endif
+    	while(!restartFlg)
+    	{
+            CyU3PGpioGetValue(FX3_RESET_KEY,&gpio_value);
+            if(gpio_value == CyTrue)
+            {
+            	CyU3PDebugPrint(4,"\n reset key 1");
+            	gpio_value = CyFalse;
+            	CyU3PThreadSleep(2000);
+            	CyU3PGpioGetValue(FX3_RESET_KEY,&gpio_value);
+            	if(gpio_value == CyTrue)
+            	{
+            		CyU3PDebugPrint(4,"\n reset key 2");
+            		while(1)
+            		{
+            			CyU3PGpioGetValue(FX3_RESET_KEY,&gpio_value);
+            			if(gpio_value == CyFalse)
+            			{
+            				restartKey = CyTrue;
+            				key2num = 0;
+            				break;
+            			}
+            			else
+            			{
+            				key2num++;
+            				CyU3PThreadSleep(100);
+            				if(key2num >= 50)
+            				{
+            					key2num = 0;
+            					break;
+            				}
+            			}
+            		}
+            		if(restartKey)
+            		{
+            			restartKey = CyFalse;
+            			RestartDevice();
+            		}
+            		else
+            		{
+                		CyU3PDebugPrint(4,"\n reset key 2, continue");
+                		CyU3PThreadSleep(500);
+            		}
 
-					if(CyFalse == fpga_init())
-					{
-						CyFxAppErrorHandler(0);
-					}
-					GrabStartFpgaWork();
-        			CyU3PThreadSleep(10000);
-        			restartFlg = CyFalse;
-        			CyU3PDebugPrint(4,"\nRestart USB' Grab Device ..ok");
-        		}
-        		else
-        		{
-            		CyU3PDebugPrint(4,"\n reset key 2, continue");
-            		CyU3PThreadSleep(500);
-        		}
-
-        	}
-        	else
-        	{
-        		CyU3PDebugPrint(4,"\n reset key 1, continue");
-        		CyU3PThreadSleep(1000);
-        	}
-        }
-        else
-        {
-        	//todo 做一个开门狗，监视fpga状态作复位
-        	GrabFpgaClkStatusDog();
-        	CyU3PThreadSleep(1000);
-        }
+            	}
+            	else
+            	{
+            		CyU3PDebugPrint(4,"\n reset key 1, continue");
+            		CyU3PThreadSleep(1000);
+            	}
+            }
+            else
+            {
+            	GrabFpgaClkStatusDog();
+            	CyU3PThreadSleep(1000);
+            }
+    	}
     }
 }
 

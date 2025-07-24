@@ -4,6 +4,27 @@
 #include "mcu_spi.h"
 #include "app_grab_cfg.h"
 #include <cyu3gpio.h>
+#include <cyu3os.h>
+
+CyU3PMutex  fpga_spi_read_lock;
+CyU3PMutex  fpga_spi_write_lock;
+
+
+/*
+ * fpga spi 锁的初始化
+ */
+void fpga_locked_init(void)
+{
+	CyU3PMutexCreate(&fpga_spi_read_lock, CYU3P_NO_INHERIT);
+    CyU3PMutexCreate(&fpga_spi_write_lock, CYU3P_NO_INHERIT);
+}
+
+
+CyBool_t fpga_locked_Deinit(void)
+{
+    CyU3PMutexDestroy(&fpga_spi_read_lock);
+    CyU3PMutexDestroy(&fpga_spi_write_lock);
+}
 
 /*function
 ********************************************************************************
@@ -42,13 +63,15 @@ CyBool_t fpga_reg_init(void)
 
 CyBool_t fpga_reg_test(void)
 {
-    uint16_t i = 0, data;
+    uint16_t i = 0, data1 = 0, data;
     while (i++ < 20)
     {
-        data = 0;
+        data = 0x86;
         CyU3PThreadSleep(100);
-        fpga_reg_read(0x0004, &data, 1); // DDR成功初始化
-        if ((data & 1) == 1)
+        fpga_reg_write(0x3000,&data,1);
+
+        fpga_reg_read(0x3000, &data1, 1); // DDR成功初始化
+        if (data == data1)
         {
             return CyTrue;
         }
@@ -56,6 +79,7 @@ CyBool_t fpga_reg_test(void)
     return CyFalse;
 }
 
+// todo fpga寄存器读写测试，fpga统计值清零
 CyBool_t fpga_init(void)
 {
     uint16_t i = 0;
@@ -70,21 +94,21 @@ CyBool_t fpga_init(void)
         CyU3PThreadSleep(1);
         CyU3PGpioSetValue(FPGA_N_CONFIG_PIN, CyTrue);
 
-		CyU3PThreadSleep(800);
-		MCUSpiWriteRead(wrBuffer, 1,NULL,0,0);
-		if(GrabGetDefaultUserParam() == CyFalse){CyU3PDebugPrint(4,"\nUSE DEFALUT PARAM");}
-		return CyTrue;
+
         if(fpga_reg_init() == CyFalse)
         {
             continue;
         }
-//        else if (fpga_reg_test() == CyFalse)
-//        {
-//            continue;
-//        }
+        else if(fpga_reg_test() == CyFalse)
+        {
+            continue;
+        }
         else
         {
-//        	if(GrabGetDefaultUserParam() == CyFalse){CyU3PDebugPrint(4,"\nUSE DEFALUT PARAM");}
+    		CyU3PThreadSleep(800);
+    		MCUSpiWriteRead(wrBuffer, 1,NULL,0,0);
+    		fpga_locked_init();
+        	if(GrabGetDefaultUserParam() == CyFalse){CyU3PDebugPrint(4,"\nUSE DEFALUT PARAM");}
             return CyTrue;
         }
     }
@@ -92,6 +116,17 @@ CyBool_t fpga_init(void)
 
     return CyFalse;
 }
+
+CyBool_t fpga_Reinit(void)
+{
+	fpga_locked_Deinit();
+	if(CyFalse == fpga_init())
+	{
+		return CyFalse;
+	}
+	return CyTrue;
+}
+
 /*function
 ********************************************************************************
 <PRE>
@@ -116,6 +151,7 @@ void fpga_reg_read(uint16_t startAddr, uint16_t *pData, uint16_t len)
     uint8_t *ptmp;
     uint8_t Buffer[4];
 
+    CyU3PMutexGet(&fpga_spi_read_lock,CYU3P_WAIT_FOREVER);
     for (i = 0; i < len; i++)
     {
         Buffer[0] = ((startAddr + i) >> 8) & 0xFF; //高位地址
@@ -126,6 +162,7 @@ void fpga_reg_read(uint16_t startAddr, uint16_t *pData, uint16_t len)
         ptmp[0] = Buffer[3];
         ptmp[1] = Buffer[2];
     }
+    CyU3PMutexPut(&fpga_spi_read_lock);
 }
 
 /*function
@@ -151,6 +188,7 @@ void fpga_reg_write(uint16_t startAddr, uint16_t *pData, uint16_t len)
     uint8_t Buffer[4];
     int i;
 
+    CyU3PMutexGet(&fpga_spi_write_lock,CYU3P_WAIT_FOREVER);
     for (i = 0; i < len; i++)
     {
         Buffer[0] = ((startAddr + i) >> 8) & 0xFF;
@@ -160,4 +198,5 @@ void fpga_reg_write(uint16_t startAddr, uint16_t *pData, uint16_t len)
         Buffer[3] = pData[i] & 0xFF;
         FxIOSpiWriteRead(Buffer, 4, NULL, 0, 0);
     }
+    CyU3PMutexPut(&fpga_spi_write_lock);
 }
