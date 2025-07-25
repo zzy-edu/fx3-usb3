@@ -6,8 +6,7 @@
 #include <cyu3gpio.h>
 #include <cyu3os.h>
 
-CyU3PMutex  fpga_spi_read_lock;
-CyU3PMutex  fpga_spi_write_lock;
+CyU3PMutex  fpga_spi_lock;
 
 
 /*
@@ -15,15 +14,13 @@ CyU3PMutex  fpga_spi_write_lock;
  */
 void fpga_locked_init(void)
 {
-	CyU3PMutexCreate(&fpga_spi_read_lock, CYU3P_NO_INHERIT);
-    CyU3PMutexCreate(&fpga_spi_write_lock, CYU3P_NO_INHERIT);
+	CyU3PMutexCreate(&fpga_spi_lock, CYU3P_NO_INHERIT);
 }
 
 
 CyBool_t fpga_locked_Deinit(void)
 {
-    CyU3PMutexDestroy(&fpga_spi_read_lock);
-    CyU3PMutexDestroy(&fpga_spi_write_lock);
+    CyU3PMutexDestroy(&fpga_spi_lock);
 }
 
 /*function
@@ -84,6 +81,7 @@ CyBool_t fpga_init(void)
 {
     uint16_t i = 0;
     uint8_t wrBuffer[1];
+    uint16_t clearvalue=0xFFFF;
     wrBuffer[0] = 0xab;
     while(i++ < 10)
     {
@@ -108,6 +106,11 @@ CyBool_t fpga_init(void)
     		CyU3PThreadSleep(800);
     		MCUSpiWriteRead(wrBuffer, 1,NULL,0,0);
     		fpga_locked_init();
+    		//清空一些计数值
+    		fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&clearvalue,1);
+    		CyU3PThreadSleep(1);
+    		clearvalue = 0x0;
+    		fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&clearvalue,1);
         	if(GrabGetDefaultUserParam() == CyFalse){CyU3PDebugPrint(4,"\nUSE DEFALUT PARAM");}
             return CyTrue;
         }
@@ -151,7 +154,7 @@ void fpga_reg_read(uint16_t startAddr, uint16_t *pData, uint16_t len)
     uint8_t *ptmp;
     uint8_t Buffer[4];
 
-    CyU3PMutexGet(&fpga_spi_read_lock,CYU3P_WAIT_FOREVER);
+    CyU3PMutexGet(&fpga_spi_lock,CYU3P_WAIT_FOREVER);
     for (i = 0; i < len; i++)
     {
         Buffer[0] = ((startAddr + i) >> 8) & 0xFF; //高位地址
@@ -162,7 +165,7 @@ void fpga_reg_read(uint16_t startAddr, uint16_t *pData, uint16_t len)
         ptmp[0] = Buffer[3];
         ptmp[1] = Buffer[2];
     }
-    CyU3PMutexPut(&fpga_spi_read_lock);
+    CyU3PMutexPut(&fpga_spi_lock);
 }
 
 /*function
@@ -188,7 +191,7 @@ void fpga_reg_write(uint16_t startAddr, uint16_t *pData, uint16_t len)
     uint8_t Buffer[4];
     int i;
 
-    CyU3PMutexGet(&fpga_spi_write_lock,CYU3P_WAIT_FOREVER);
+    CyU3PMutexGet(&fpga_spi_lock,CYU3P_WAIT_FOREVER);
     for (i = 0; i < len; i++)
     {
         Buffer[0] = ((startAddr + i) >> 8) & 0xFF;
@@ -198,5 +201,5 @@ void fpga_reg_write(uint16_t startAddr, uint16_t *pData, uint16_t len)
         Buffer[3] = pData[i] & 0xFF;
         FxIOSpiWriteRead(Buffer, 4, NULL, 0, 0);
     }
-    CyU3PMutexPut(&fpga_spi_write_lock);
+    CyU3PMutexPut(&fpga_spi_lock);
 }

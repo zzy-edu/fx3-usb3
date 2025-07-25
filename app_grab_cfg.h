@@ -304,5 +304,6 @@ void GrabTriggerFlcBitAndUpdate(void);
 
 /*Debug funciton */
 void Debug_manul_reset(void);
+void GrabGetFpgaLedStatus(uint8_t cl0_status, uint8_t fpga_led_status);
 
 #endif

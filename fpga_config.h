@@ -39,10 +39,13 @@
 #define DDR_OUT_EN_REG_ADDRESS 						(0x3001) // 当接收有问题时，控制此端口
 #define MAIN_FUNCTION_REG_ADDRESS 					(0x3010) // 单片机控制
 #define TEST_PATTERN_REG_ADDRESS					(0x3011) // 测试图模式
+#define CC1_EN_ADDRESS								(0x3012) // 控制cc1输出
 #define CC1_LOW_LEVEL_REG_ADDRESS 					(0x3015) // 0x3015~0x3016 cc1低电平输出时间（100M）
 #define CC1_HIGH_LEVEL_REG_ADDRESS 					(0x3017) // 0x3017~0x3018 cc1高电平输出时间（100M）
 #define CC1_NUM_REG_ADDRESS							(0x3019) // 0x3019~0x301a  输出个数
 #define DEV_INDEX_REG_ADDRESS 						(0x3302) // 图像采集的设备编号
+#define LED_LOW_ADDRESS								(0x3310) // 状态灯低电平输出时间（两个灯状态相同）（100M）
+#define LED_HIGHT_ADDRESS							(0x3312) // 状态灯高电平输出时间（两个灯状态相同）（100M）
 
 /*NOTE: */
 #define FVAL_STTVALUE_CURRENT_REG_ADDRESS_1			(0x0064) // 0x0064~0x0083

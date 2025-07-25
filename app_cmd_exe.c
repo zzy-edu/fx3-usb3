@@ -86,6 +86,11 @@ CyBool_t exe_set_comm_obj(tagCmdFormatterContent *cmdRecv, tagCmdFormatterConten
     	}
     	return CyTrue;
     }
+    else if(cmdRecv->Param_Num == 2)
+    {
+    	GrabGetFpgaLedStatus((uint8_t)cmdRecv->Params[0]&0xff,(uint8_t)cmdRecv->Params[1]&0xff);
+    	return CyTrue;
+    }
     return CyFalse;
 }
 
@@ -607,7 +612,7 @@ CyBool_t exe_get_FPGA_reg(tagCmdFormatterContent *cmdRecv, tagCmdFormatterConten
         cmdSend->Param_Num = 2;
         cmdSend->Params[0] = cmdRecv->Params[0];
         fpga_reg_read((uint16_t)cmdRecv->Params[0], (uint16_t *)&cmdSend->Params[1], 1);
-        CyU3PDebugPrint(4,"\nreg:%x,value:%x",(uint16_t)cmdRecv->Params[0],(uint16_t)cmdSend->Params[1]);
+        CyU3PDebugPrint(4,"\nreg:%4x,value:%4x",(uint16_t)cmdRecv->Params[0],(uint16_t)cmdSend->Params[1]);
     }
     else if (cmdRecv->Param_Num == 2)
     {
@@ -799,13 +804,20 @@ CyBool_t exe_set_test_mode(tagCmdFormatterContent *cmdRecv, tagCmdFormatterConte
 }
 
 
-/* 启动 停止触发*/
+/* ccl 启动 停止触发*/
 CyBool_t exe_set_trigger(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend)
 {
 	fill_command_char(cmdSend, 's', 't', 'r', 'i');
 	//todo 参数个数为1 直接写寄存器就行
-	cmdSend->Param_Num = 0;
-
+	if(cmdRecv->Param_Num == 1)
+	{
+		cmdSend->Param_Num = 0;
+		fpga_reg_write(CC1_EN_ADDRESS,(uint16_t *)(&cmdRecv->Params[0]),1);
+	}
+	else
+	{
+		return CyFalse;
+	}
 	return CyTrue;
 }
 
@@ -1024,7 +1036,7 @@ CyBool_t CmdHexExecute(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *
 	}
     case 80:
     {
-    	//启动/停止触发
+    	// 启动/停止 ccl触发
     	return exe_set_trigger(cmdRecv,cmdSend);
     }
     case 91:

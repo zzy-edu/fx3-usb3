@@ -48,6 +48,8 @@ uint8_t cl1_nolocked_num = 0;
 uint8_t cl2_nolocked_num = 0;
 uint8_t cl3_nolocked_num = 0;
 
+uint8_t fpga_led = 0;
+
 
 /*function
 ********************************************************************************
@@ -222,6 +224,76 @@ CyBool_t GrabGetDefaultUserParam(void)
 	return CyTrue;
 }
 
+
+/*function
+********************************************************************************
+<PRE>
+函数名   :
+功能     : fpga 灯和State 灯控制
+参数     :
+	   uint32_t status 状态值
+返回值   : void
+抛出异常 :
+--------------------------------------------------------------------------------
+备注     : fpga_led_status = 0 常亮
+  	  	  	  	  	  	1  4s
+  	  	  	  	  	  	5  2s
+  	  	  	  	  	  	6  0.2s
+  	  	  	  	  	  	21 0.1s
+  	  cl0_status	  = 3 1s
+  	  	  	  	  	  	4 0.5s
+典型用法 :
+--------------------------------------------------------------------------------
+作者     :
+</PRE>
+*******************************************************************************/
+void GrabSetFpgaLedStatus(uint32_t low_time, uint32_t high_time)
+{
+	fpga_reg_write(LED_LOW_ADDRESS,(uint16_t *)&low_time,2);
+	fpga_reg_write(LED_HIGHT_ADDRESS,(uint16_t *)&high_time,2);
+}
+
+void GrabGetFpgaLedStatus(uint8_t cl0_status, uint8_t fpga_led_status)
+{
+	if(cl0_status == 3)
+	{	// 1s
+		GrabSetFpgaLedStatus(100000000,100000000);
+	}
+	else if(cl0_status == 4)
+	{	// 0.5s
+		GrabSetFpgaLedStatus(50000000,50000000);
+	}
+	else if(fpga_led_status == 0)
+	{
+		//常亮
+		GrabSetFpgaLedStatus(0,100000000);
+	}
+	else if(fpga_led_status == 1)
+	{
+		//4s
+		GrabSetFpgaLedStatus(400000000,400000000);
+	}
+	else if(fpga_led_status == 5)
+	{
+		//2s
+		GrabSetFpgaLedStatus(200000000,200000000);
+	}
+	else if(fpga_led_status == 6)
+	{
+		//0.2s
+		GrabSetFpgaLedStatus(20000000,20000000);
+	}
+	else if(fpga_led_status == 21)
+	{
+		//0.1s
+		GrabSetFpgaLedStatus(10000000,10000000);
+	}
+	else
+	{
+
+	}
+}
+
 /*function
 ********************************************************************************
 <PRE>
@@ -232,7 +304,11 @@ CyBool_t GrabGetDefaultUserParam(void)
 返回值   : 成功 CyTrue 失败CyFalse
 抛出异常 :
 --------------------------------------------------------------------------------
-备注     :
+备注     : 		cl0 ck1
+		clk  1   4
+		fval 2   5
+		lval 3   6
+
 典型用法 :
 --------------------------------------------------------------------------------
 作者     :
@@ -242,10 +318,14 @@ void GrabGetSystemStatus(void)
 {
 	//TODO
 	uint32_t cur_value = 0;
+	// fpga_led 状态标记，置位对应位时将其状态标记置为对应置
+	uint8_t cl0_status = 0; //
+	uint8_t fpga_led_status = 0;
 	/* 读cl0_fval_cnt */
 	fpga_reg_read(CL0_FVAL_CNT_REG_ADDRESS,(uint16_t*)(&cur_value),2);
 	if(cur_value != cl0_fval_cnt)
 	{
+		cl0_status += 2;
 		SET_BIT(grabsysStatus,2);
 	}
 	else
@@ -259,28 +339,26 @@ void GrabGetSystemStatus(void)
 	fpga_reg_read(CL0_LVAL_CNT_REG_ADDRESS,(uint16_t*)(&cur_value),2);
 	if(cur_value != cl0_lval_cnt)
 	{
+		cl0_status += 3;
 		SET_BIT(grabsysStatus,1);
 	}
 	else
 	{
 		CLEAR_BIT(grabsysStatus,1);
 	}
-	cl0_lval_cnt = cur_value;
 
 	/* 读cl0_clk_cnt */
 	cur_value = 0;
 	fpga_reg_read(CL0_CLK_CNT_REG_ADDRESS,(uint16_t*)(&cur_value),2);
-	if(cur_value > cl0_clk_cnt)
+	if(abs(cur_value - cl0_clk_cnt) >= CLK_NORM_CNT)
 	{
-		if(cur_value - cl0_clk_cnt >= CLK_NORM_CNT)
-		{
-			SET_BIT(grabsysStatus,0);
-		}
-		else
-		{
-			CLEAR_BIT(grabsysStatus,0);
-		}
+		cl0_status += 1;
 		cl0_clk_cnt = cur_value;
+		SET_BIT(grabsysStatus,0);
+	}
+	else
+	{
+		CLEAR_BIT(grabsysStatus,0);
 	}
 
 	/* 读cl1_fval_cnt */
@@ -288,6 +366,7 @@ void GrabGetSystemStatus(void)
 	fpga_reg_read(CL1_FVAL_CNT_REG_ADDRESS,(uint16_t*)(&cur_value),2);
 	if(cur_value != cl1_fval_cnt)
 	{
+		fpga_led_status += 5;
 		SET_BIT(grabsysStatus,5);
 	}
 	else
@@ -301,6 +380,7 @@ void GrabGetSystemStatus(void)
 	fpga_reg_read(CL1_LVAL_CNT_REG_ADDRESS,(uint16_t*)(&cur_value),2);
 	if(cur_value != cl1_lval_cnt)
 	{
+		fpga_led_status += 6;
 		SET_BIT(grabsysStatus,4);
 	}
 	else
@@ -310,20 +390,26 @@ void GrabGetSystemStatus(void)
 	cl1_lval_cnt = cur_value;
 
 	/* 读cl1_clk_cnt */
-	cur_value = 0;
+	cur_value = 1;
 	fpga_reg_read(CL1_CLK_CNT_REG_ADDRESS,(uint16_t*)(&cur_value),2);
-	if(cur_value > cl1_clk_cnt)
+	if(abs(cur_value - cl1_clk_cnt) >= CLK_NORM_CNT)
 	{
-		if(cur_value - cl1_clk_cnt >= CLK_NORM_CNT)
-		{
-			SET_BIT(grabsysStatus,3);
-		}
-		else
-		{
-			CLEAR_BIT(grabsysStatus,3);
-		}
+		fpga_led_status += 4;
 		cl1_clk_cnt = cur_value;
+		SET_BIT(grabsysStatus,3);
 	}
+	else
+	{
+		CLEAR_BIT(grabsysStatus,3);
+	}
+
+	fpga_led_status += cl0_status;
+	if(fpga_led_status != fpga_led)
+	{
+		fpga_led = fpga_led_status;
+		GrabGetFpgaLedStatus(cl0_status,fpga_led);
+	}
+
 }
 
 /*function
@@ -353,12 +439,16 @@ void GrabFpgaClkStatusDog(void)
 		if(cl1_nolocked_num >=3)
 		{
 			cl1_nolocked_num = 0;
-			//todo 复位cl1_clk_pll
+			//todo 复位cl1_clk_pll, 复位一下flc
 			fpga_reg_read(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
+			//将 cl1 和 flc 置1清零
 			SET_BIT(tmp16Bit,2);
+			SET_BIT(tmp16Bit,5);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 			CyU3PThreadSleep(1);
+			//将 cl1 和 flc 置0复位
 			CLEAR_BIT(tmp16Bit,2);
+			CLEAR_BIT(tmp16Bit,5);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 		}
 	}
@@ -377,9 +467,11 @@ void GrabFpgaClkStatusDog(void)
 			//todo 复位cl2_clk_pll
 			fpga_reg_read(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 			SET_BIT(tmp16Bit,3);
+			SET_BIT(tmp16Bit,5);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 			CyU3PThreadSleep(1);
 			CLEAR_BIT(tmp16Bit,3);
+			CLEAR_BIT(tmp16Bit,5);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 		}
 	}
@@ -397,9 +489,11 @@ void GrabFpgaClkStatusDog(void)
 			//todo 复位cl3_clk_pll
 			fpga_reg_read(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 			SET_BIT(tmp16Bit,4);
+			SET_BIT(tmp16Bit,5);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 			CyU3PThreadSleep(1);
 			CLEAR_BIT(tmp16Bit,4);
+			CLEAR_BIT(tmp16Bit,5);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 		}
 	}

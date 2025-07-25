@@ -698,6 +698,7 @@ void CyFxSlFifoApplnInit(void)
         // CyU3PDebugPrint (4, "USB Connect failed, Error code = %d\n", apiRetStatus);
         CyFxAppErrorHandler(apiRetStatus);
     }
+
     isControlRun = CyFalse;
 }
 
@@ -759,32 +760,36 @@ void SlFifoAppThread_Entry(
     }
     for (;;)
     {
+			while(restartFlg || restartKey)
+			{
+				CyU3PThreadSleep(10);
+			}
             CyU3PGpioSetValue(FX3_LED_PIN, CyTrue);
             CyU3PThreadSleep(500);
             CyU3PGpioSetValue(FX3_LED_PIN, CyFalse);
             CyU3PThreadSleep(500);
             GrabGetSystemStatus();
             GrabTriggerFlcBitAndUpdate();
-            while(restartFlg || restartKey)
-            {
-            	CyU3PThreadSleep(10);
-            }
     }
 }
 
 
 void RestartDevice(void)
 {
+
+	CyU3PDebugPrint(4,"\nRestart USB' Grab Device ...");
 	restartFlg = CyTrue;
 	//清空fifo
 	FifoFlush(&glSendFifo);
-	// fx3 通道重置
+	// fpga stop
 	GrabStopFpgaWork();
-	CyU3PDebugPrint(4,"\nRestart USB' Grab Device ...");
+
+	// dma 图像通道关闭
     if (glIsApplnActive)
     {
         CyFxSlFifoApplnStop();
     }
+    // cdc 串口通道关闭
 	#ifdef cdc
 	CdcChannelTryStop();
 	if(globUartConfig == CyTrue)
@@ -792,7 +797,9 @@ void RestartDevice(void)
 	#endif
     CyU3PUsbLPMDisable();
     /* Start the loop back function. */
+    // dma 图像通道打开
     CyFxSlFifoApplnStart();
+    //cdc 串口通道打开
 	#ifdef cdc
 		CyFxUSBUARTAppStart();
 		if(globUartConfig == CyTrue)
@@ -803,6 +810,7 @@ void RestartDevice(void)
 	{
 		CyFxAppErrorHandler(0);
 	}
+	// fpga start
 	GrabStartFpgaWork();
 
 	CyU3PThreadSleep(10000);
@@ -834,6 +842,7 @@ RestartAppThread_Entry (
             		CyU3PDebugPrint(4,"\n reset key 2");
             		while(1)
             		{
+            			CyU3PGpioSetValue(FX3_LED_PIN, CyFalse);
             			CyU3PGpioGetValue(FX3_RESET_KEY,&gpio_value);
             			if(gpio_value == CyFalse)
             			{
@@ -859,6 +868,7 @@ RestartAppThread_Entry (
             		}
             		else
             		{
+            			CyU3PGpioSetValue(FX3_LED_PIN, CyTrue);
                 		CyU3PDebugPrint(4,"\n reset key 2, continue");
                 		CyU3PThreadSleep(500);
             		}
