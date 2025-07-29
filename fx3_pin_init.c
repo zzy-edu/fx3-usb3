@@ -40,6 +40,8 @@ CyU3PReturnStatus_t fx3_device_init(void)
     }
 
     /* Configure the IO matrix for the device. */
+    io_cfg.s0Mode = CY_U3P_SPORT_INACTIVE;
+    io_cfg.s1Mode = CY_U3P_SPORT_INACTIVE;
     io_cfg.useUart = CyTrue;
     io_cfg.useI2C = CyFalse;
     io_cfg.useI2S = CyFalse;

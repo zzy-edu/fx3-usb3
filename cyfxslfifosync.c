@@ -298,22 +298,22 @@ CyFxSlFifoApplnUSBSetupCB(
         if ((bTarget == CY_U3P_USB_TARGET_ENDPT) && (bRequest == CY_U3P_USB_SC_CLEAR_FEATURE)
                 && (wValue == CY_U3P_USBX_FS_EP_HALT))
         {
-            if (wIndex == CY_FX_EP_CONSUMER)
+            if (glIsApplnActive)
             {
-                if (glIsApplnActive)
-                {
-                	CyU3PDebugPrint(4,"CY_U3P_USB_SC_CLEAR_FEATURE happened");
-                	GrabStopFpgaWork();
-                	CyFxSlFifoApplnStop();
-                    /* Give a chance for the main thread loop to run. */
-                    CyU3PThreadSleep(1);
-                    CyFxSlFifoApplnStart();
-                    CyU3PUsbStall(wIndex, CyFalse, CyTrue);
-                    CyU3PThreadSleep(20);
-                    GrabStartFpgaWork();
-                    CyU3PUsbAckSetup ();
-                    isHandled = CyTrue;
-                }
+				if (wIndex == CY_FX_EP_CONSUMER)
+				{
+						CyU3PDebugPrint(4,"CY_U3P_USB_SC_CLEAR_FEATURE happened");
+						GrabStopFpgaWork();
+						CyFxSlFifoApplnStop();
+						/* Give a chance for the main thread loop to run. */
+						CyU3PThreadSleep(1);
+						CyFxSlFifoApplnStart();
+						CyU3PUsbStall(wIndex, CyFalse, CyTrue);
+						CyU3PThreadSleep(20);
+						GrabStartFpgaWork();
+						CyU3PUsbAckSetup ();
+						isHandled = CyTrue;
+				}
             }
         }
     }
@@ -519,6 +519,7 @@ void CyFxSlFifoApplnUSBEventCB(
     switch (evtype)
     {
     case CY_U3P_USB_EVENT_SETCONF:
+        CyU3PUsbLPMDisable();
         /* Stop the application before re-starting. */
         if (glIsApplnActive)
         {
@@ -530,7 +531,6 @@ void CyFxSlFifoApplnUSBEventCB(
 		if(globUartConfig == CyTrue)
 			CyU3PDebugDeInit(); //避免CDC端点被debug占用，导致重启设备失败
 		#endif
-        CyU3PUsbLPMDisable();
         /* Start the loop back function. */
         CyFxSlFifoApplnStart();
 		#ifdef cdc
@@ -623,7 +623,7 @@ void CyFxSlFifoApplnInit(void)
     apiRetStatus = CyU3PUsbSetDesc(CY_U3P_USB_SET_HS_DEVICE_DESCR, 0, (uint8_t *)CyFxUSB20DeviceDscr);
     if (apiRetStatus != CY_U3P_SUCCESS)
     {
-        // CyU3PDebugPrint (4, "USB set device descriptor failed, Error code = %d\n", apiRetStatus);
+//        CyU3PDebugPrint (4, "USB set device descriptor failed, Error code = %d\n", apiRetStatus);
         CyFxAppErrorHandler(apiRetStatus);
     }
 
@@ -776,46 +776,53 @@ void SlFifoAppThread_Entry(
 
 void RestartDevice(void)
 {
-
-	CyU3PDebugPrint(4,"\nRestart USB' Grab Device ...");
 	restartFlg = CyTrue;
-	//清空fifo
-	FifoFlush(&glSendFifo);
-	// fpga stop
-	GrabStopFpgaWork();
+	// todo reset函数的作用得验一下，通道，线程，dma
+	// 这个执行完之后 windows上的设备就没了
+    CyU3PConnectState (CyFalse, CyTrue);
+    CyU3PThreadSleep (3000);
+	// 从 main 开始重新执行的，设备会消失，很彻底，上位机的扫描有bug,我重启的时候应该断开一下，不然是假连接，控制通道和数据通道不能用
+	CyU3PDeviceReset(CyFalse);
 
-	// dma 图像通道关闭
-    if (glIsApplnActive)
-    {
-        CyFxSlFifoApplnStop();
-    }
-    // cdc 串口通道关闭
-	#ifdef cdc
-	CdcChannelTryStop();
-	if(globUartConfig == CyTrue)
-		CyU3PDebugDeInit(); //避免CDC端点被debug占用，导致重启设备失败
-	#endif
-    CyU3PUsbLPMDisable();
-    /* Start the loop back function. */
-    // dma 图像通道打开
-    CyFxSlFifoApplnStart();
-    //cdc 串口通道打开
-	#ifdef cdc
-		CyFxUSBUARTAppStart();
-		if(globUartConfig == CyTrue)
-			DebugInitUsingCDC();
-	#endif
-	// fpga_Reinit
-	if(CyFalse == fpga_Reinit())
-	{
-		CyFxAppErrorHandler(0);
-	}
-	// fpga start
-	GrabStartFpgaWork();
-
-	CyU3PThreadSleep(10000);
-	restartFlg = CyFalse;
-	CyU3PDebugPrint(4,"\nRestart USB' Grab Device ...ok");
+	// 第二种方法是手动释放各种资源，但这个不彻底，重启完之后，上位机可以直接使用
+//	CyU3PDebugPrint(4,"\nRestart USB' Grab Device ...");
+//	restartFlg = CyTrue;
+//	//清空fifo
+//	FifoFlush(&glSendFifo);
+//	// fpga stop
+//	GrabStopFpgaWork();
+//
+//	// dma 图像通道关闭
+//    if (glIsApplnActive)
+//    {
+//        CyFxSlFifoApplnStop();
+//    }
+//    // cdc 串口通道关闭
+//	#ifdef cdc
+//	CdcChannelTryStop();
+//	if(globUartConfig == CyTrue)
+//		CyU3PDebugDeInit(); //避免CDC端点被debug占用，导致重启设备失败
+//	#endif
+//    CyU3PUsbLPMDisable();
+//    /* Start the loop back function. */
+//    // dma 图像通道打开
+//    CyFxSlFifoApplnStart();
+//    //cdc 串口通道打开
+//	#ifdef cdc
+//		CyFxUSBUARTAppStart();
+//		if(globUartConfig == CyTrue)
+//			DebugInitUsingCDC();
+//	#endif
+//	// fpga_Reinit
+//	if(CyFalse == fpga_Reinit())
+//	{
+//		CyFxAppErrorHandler(0);
+//	}
+//	// fpga start
+//	GrabStartFpgaWork();
+//	CyU3PThreadSleep(10000);
+//	restartFlg = CyFalse;
+//	CyU3PDebugPrint(4,"\nRestart USB' Grab Device ...ok");
 }
 
 
@@ -864,6 +871,8 @@ RestartAppThread_Entry (
             		if(restartKey)
             		{
             			restartKey = CyFalse;
+            			// 把fpga的灯也关掉
+            			GrabSetFpgaLedStatus(100000000,0);
             			RestartDevice();
             		}
             		else

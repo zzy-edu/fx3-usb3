@@ -18,7 +18,7 @@ void fpga_locked_init(void)
 }
 
 
-CyBool_t fpga_locked_Deinit(void)
+void fpga_locked_Deinit(void)
 {
     CyU3PMutexDestroy(&fpga_spi_lock);
 }

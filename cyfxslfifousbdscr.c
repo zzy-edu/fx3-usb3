@@ -40,7 +40,7 @@ const uint8_t CyFxUSB30DeviceDscr[] __attribute__ ((aligned (32))) =
 {
     0x12,                           /* Descriptor size */
     CY_U3P_USB_DEVICE_DESCR,        /* Device descriptor type */
-    0x00,0x03,                      /* USB 3.0 */
+    0x20,0x03,                      /* USB 3.0 */
     0x00,                           /* Device class */
     0x00,                           /* Device sub-class */
     0x00,                           /* Device protocol */
@@ -85,7 +85,8 @@ const uint8_t CyFxUSBBOSDscr[] __attribute__ ((aligned (32))) =
     0x07,                           /* Descriptor size */
     CY_U3P_DEVICE_CAPB_DESCR,       /* Device capability type descriptor */
     CY_U3P_USB2_EXTN_CAPB_TYPE,     /* USB 2.0 extension capability type */
-    0x02,0x00,0x00,0x00,            /* Supported device level features: LPM support  */
+    0x1E,0x64,0x00,0x00,            /* Supported device level features: LPM support, BESL supported,
+										Baseline BESL=400 us, Deep BESL=1000 us. */
 
     /* SuperSpeed device capability */
     0x0A,                           /* Descriptor size */
@@ -219,7 +220,7 @@ const uint8_t CyFxUSBSSConfigDscr[] __attribute__ ((aligned (32))) =
 
     /* Endpoint Descriptor(Interrupt) */
     0x07,                           /* Descriptor size */
-    CY_U3P_USB_ENDPNT_DESCR,        /* Endpoint descriptor type */
+    CY_U3P_USB_ENDPNT_DESCR,        /* Endpoint descriptor type 0x05 */
     CY_FX_EP_INTERRUPT_CDC,             /* Endpoint address and description */
     CY_U3P_USB_EP_INTR,             /* Interrupt endpoint type */
     0x40,0x00,                      /* Max packet size = 1024 bytes */
@@ -282,7 +283,7 @@ const uint8_t CyFxUSBHSConfigDscr[] __attribute__ ((aligned (32))) =
     0x09,                           /* Descriptor size */
     CY_U3P_USB_CONFIG_DESCR,        /* Configuration descriptor type */
 #ifdef cdc
-    0x6D,0x00,                      /* Length of this descriptor and all sub descriptors */
+    0x5B,0x00,                      /* Length of this descriptor and all sub descriptors */
     0x03,                           /* Number of interfaces */
 #else
     0x19, 0x00,                     /* Length of this descriptor and all sub descriptors */
@@ -358,7 +359,7 @@ const uint8_t CyFxUSBHSConfigDscr[] __attribute__ ((aligned (32))) =
     0x05,                           /* Descriptors Length (5) */
     0x24,                           /* bDescriptorType: CS_INTERFACE */
     0x06,                           /* bDescriptorSubType: Union Functional Descriptor */
-    0x00,                           /* bMasterInterface */
+    0x02,                           /* bMasterInterface */
     0x01,                           /* bSlaveInterface */
 
     /* Call Management Functional Descriptor */
@@ -374,15 +375,8 @@ const uint8_t CyFxUSBHSConfigDscr[] __attribute__ ((aligned (32))) =
     CY_U3P_USB_ENDPNT_DESCR,        /* Endpoint descriptor type */
     CY_FX_EP_INTERRUPT_CDC,             /* Endpoint address and description */
     CY_U3P_USB_EP_INTR,             /* Interrupt endpoint type */
-    0x40,0x00,                      /* Max packet size = 1024 bytes */
-    0x01,                           /* Servicing interval for data transfers */
-
-    /* Super speed endpoint companion descriptor for interrupt endpoint */
-    0x06,                           /* Descriptor size */
-    CY_U3P_SS_EP_COMPN_DESCR,       /* SS endpoint companion descriptor type */
-    0x00,                           /* Max no. of packets in a Burst : 1 */
-    0x00,                           /* Mult.: Max number of packets : 1 */
-    0x40,0x00,                      /* Bytes per interval : 1024 */
+    0x40,0x00,                      /* Max packet size = 64 bytes */
+    0x02,                           /* Servicing interval for data transfers */
 
     /* Data Interface Descriptor */
     0x09,                           /* Descriptor size */
@@ -400,30 +394,16 @@ const uint8_t CyFxUSBHSConfigDscr[] __attribute__ ((aligned (32))) =
     CY_U3P_USB_ENDPNT_DESCR,        /* Endpoint descriptor type */
     CY_FX_EP_PRODUCER_CDC,                           /* Endpoint address and description */
     CY_U3P_USB_EP_BULK,             /* BULK endpoint type */
-    0x00,0x04,                      /* Max packet size = 1024 bytes */
+    0x00,0x02,                      /* Max packet size = 512 bytes */
     0x00,                           /* Servicing interval for data transfers */
-
-    /* Super speed endpoint companion descriptor for producer ep */
-    0x06,                           /* Descriptor size */
-    CY_U3P_SS_EP_COMPN_DESCR,       /* SS endpoint companion descriptor type */
-    0x00,                           /* Max no. of packets in a burst : 1 */
-    0x00,                           /* Mult.: Max number of packets : 1 */
-    0x00,0x00,                      /* Bytes per interval : 1024 */
 
     /* Endpoint Descriptor(BULK- CONSUMER) */
     0x07,                           /* Descriptor size */
     CY_U3P_USB_ENDPNT_DESCR,        /* Endpoint descriptor type */
     CY_FX_EP_CONSUMER_CDC,                           /* Endpoint address and description */
     CY_U3P_USB_EP_BULK,             /* BULK endpoint type */
-    0x00,0x04,                      /* Max packet size = 1024 bytes */
-    0x00,                           /* Servicing interval for data transfers */
-
-    /* Super speed endpoint companion descriptor for consumer ep */
-    0x06,                           /* Descriptor size */
-    CY_U3P_SS_EP_COMPN_DESCR,       /* SS endpoint companion descriptor type */
-    0x00,                           /* Max no. of packets in a burst : 1 */
-    0x00,                           /* Mult.: Max number of packets : 1 */
-    0x00,0x00                       /* Bytes per interval : 1024 */
+    0x00,0x02,                      /* Max packet size = 512 bytes */
+    0x00                          	/* Servicing interval for data transfers */
 #endif
 };
 
@@ -434,7 +414,7 @@ const uint8_t CyFxUSBFSConfigDscr[] __attribute__ ((aligned (32))) =
     0x09,                           /* Descriptor size */
     CY_U3P_USB_CONFIG_DESCR,        /* Configuration descriptor type */
 #ifdef cdc
-    0x6D,0x00,                      /* Length of this descriptor and all sub descriptors */
+    0x5B,0x00,                      /* Length of this descriptor and all sub descriptors */
     0x03,                           /* Number of interfaces */
 #else
     0x19,0x00,                      /* Length of this descriptor and all sub descriptors */
@@ -511,7 +491,7 @@ const uint8_t CyFxUSBFSConfigDscr[] __attribute__ ((aligned (32))) =
     0x05,                           /* Descriptors Length (5) */
     0x24,                           /* bDescriptorType: CS_INTERFACE */
     0x06,                           /* bDescriptorSubType: Union Functional Descriptor */
-    0x00,                           /* bMasterInterface */
+    0x02,                           /* bMasterInterface */
     0x01,                           /* bSlaveInterface */
 
     /* Call Management Functional Descriptor */
@@ -527,15 +507,8 @@ const uint8_t CyFxUSBFSConfigDscr[] __attribute__ ((aligned (32))) =
     CY_U3P_USB_ENDPNT_DESCR,        /* Endpoint descriptor type */
     CY_FX_EP_INTERRUPT_CDC,             /* Endpoint address and description */
     CY_U3P_USB_EP_INTR,             /* Interrupt endpoint type */
-    0x40,0x00,                      /* Max packet size = 1024 bytes */
-    0x01,                           /* Servicing interval for data transfers */
-
-    /* Super speed endpoint companion descriptor for interrupt endpoint */
-    0x06,                           /* Descriptor size */
-    CY_U3P_SS_EP_COMPN_DESCR,       /* SS endpoint companion descriptor type */
-    0x00,                           /* Max no. of packets in a Burst : 1 */
-    0x00,                           /* Mult.: Max number of packets : 1 */
-    0x40,0x00,                      /* Bytes per interval : 1024 */
+    0x40,0x00,                      /* Max packet size = 64 bytes */
+    0x02,                           /* Servicing interval for data transfers */
 
     /* Data Interface Descriptor */
     0x09,                           /* Descriptor size */
@@ -553,30 +526,16 @@ const uint8_t CyFxUSBFSConfigDscr[] __attribute__ ((aligned (32))) =
     CY_U3P_USB_ENDPNT_DESCR,        /* Endpoint descriptor type */
     CY_FX_EP_PRODUCER_CDC,                           /* Endpoint address and description */
     CY_U3P_USB_EP_BULK,             /* BULK endpoint type */
-    0x00,0x04,                      /* Max packet size = 1024 bytes */
+    0x00,0x02,                      /* Max packet size = 512 bytes */
     0x00,                           /* Servicing interval for data transfers */
-
-    /* Super speed endpoint companion descriptor for producer ep */
-    0x06,                           /* Descriptor size */
-    CY_U3P_SS_EP_COMPN_DESCR,       /* SS endpoint companion descriptor type */
-    0x00,                           /* Max no. of packets in a burst : 1 */
-    0x00,                           /* Mult.: Max number of packets : 1 */
-    0x00,0x00,                      /* Bytes per interval : 1024 */
 
     /* Endpoint Descriptor(BULK- CONSUMER) */
     0x07,                           /* Descriptor size */
     CY_U3P_USB_ENDPNT_DESCR,        /* Endpoint descriptor type */
     CY_FX_EP_CONSUMER_CDC,                           /* Endpoint address and description */
     CY_U3P_USB_EP_BULK,             /* BULK endpoint type */
-    0x00,0x04,                      /* Max packet size = 1024 bytes */
-    0x00,                           /* Servicing interval for data transfers */
-
-    /* Super speed endpoint companion descriptor for consumer ep */
-    0x06,                           /* Descriptor size */
-    CY_U3P_SS_EP_COMPN_DESCR,       /* SS endpoint companion descriptor type */
-    0x00,                           /* Max no. of packets in a burst : 1 */
-    0x00,                           /* Mult.: Max number of packets : 1 */
-    0x00,0x00                       /* Bytes per interval : 1024 */
+    0x00,0x02,                      /* Max packet size = 512 bytes */
+    0x00                           /* Servicing interval for data transfers */
 #endif
 
 };

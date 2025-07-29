@@ -48,7 +48,8 @@ uint8_t cl1_nolocked_num = 0;
 uint8_t cl2_nolocked_num = 0;
 uint8_t cl3_nolocked_num = 0;
 
-uint8_t fpga_led = 0;
+uint8_t fpga_led_old_status = 0;
+uint8_t cl0_old_status = 0;
 
 
 /*function
@@ -402,12 +403,16 @@ void GrabGetSystemStatus(void)
 	{
 		CLEAR_BIT(grabsysStatus,3);
 	}
-
 	fpga_led_status += cl0_status;
-	if(fpga_led_status != fpga_led)
+	/*
+	 * fpga_led_status += cl0_status,也就是说当cl0_status的值变了，fpga_led_status也会跟着变（fpga_led_status后面三个值改变，不会出现）
+	 * 可以保证cl0_status 从 == 3 || == 4 翻转为 ！=3 && ！=4的情况，必须进行写一次
+	 * */
+	if(((cl0_status == 3 || cl0_status == 4) && cl0_old_status != cl0_status) || fpga_led_old_status != fpga_led_status )
 	{
-		fpga_led = fpga_led_status;
-		GrabGetFpgaLedStatus(cl0_status,fpga_led);
+		GrabGetFpgaLedStatus(cl0_status,fpga_led_status);
+		cl0_old_status = cl0_status;
+		fpga_led_old_status = fpga_led_status;
 	}
 
 }

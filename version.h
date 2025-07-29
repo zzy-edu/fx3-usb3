@@ -61,5 +61,5 @@
 
 
 
-#define SOFT_UPDATE_DATE 0x20250728
+#define SOFT_UPDATE_DATE 0x20250729
 #endif
