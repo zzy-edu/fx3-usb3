@@ -51,6 +51,11 @@ uint8_t cl3_nolocked_num = 0;
 uint8_t fpga_led_old_status = 0;
 uint8_t cl0_old_status = 0;
 
+CyBool_t first_cmd = CyTrue;
+CyBool_t qtConnectedState = CyFalse;
+uint64_t qtDisconnectCount = 0;
+uint64_t qtDisconnectOldCount = 0;
+
 
 /*function
 ********************************************************************************
@@ -315,6 +320,7 @@ void GrabGetFpgaLedStatus(uint8_t cl0_status, uint8_t fpga_led_status)
 作者     :
 </PRE>
 *******************************************************************************/
+uint8_t qtConnectedLine = 0;
 void GrabGetSystemStatus(void)
 {
 	//TODO
@@ -322,10 +328,34 @@ void GrabGetSystemStatus(void)
 	// fpga_led 状态标记，置位对应位时将其状态标记置为对应置
 	uint8_t cl0_status = 0; //
 	uint8_t fpga_led_status = 0;
+
+	//fx3 灯控
+	if( qtDisconnectOldCount != qtDisconnectCount)
+	{
+		qtConnectedLine = 0;
+		qtDisconnectOldCount = qtDisconnectCount;
+	}
+	else
+	{
+		if(qtConnectedLine > 6)
+		{
+			qtConnectedLine = 0;
+			qtDisconnectOldCount = 0;
+			qtDisconnectCount = 0;
+			first_cmd = CyTrue;
+			qtConnectedState = CyFalse;
+		}
+		else
+		{
+			qtConnectedLine++;
+		}
+	}
+
 	/* 读cl0_fval_cnt */
 	fpga_reg_read(CL0_FVAL_CNT_REG_ADDRESS,(uint16_t*)(&cur_value),2);
 	if(cur_value != cl0_fval_cnt)
 	{
+		cl0_fval_cnt = cur_value;
 		cl0_status += 2;
 		SET_BIT(grabsysStatus,2);
 	}
@@ -333,7 +363,6 @@ void GrabGetSystemStatus(void)
 	{
 		CLEAR_BIT(grabsysStatus,2);
 	}
-	cl0_fval_cnt = cur_value;
 
 	/* 读cl0_lval_cnt */
 	cur_value = 0;
@@ -341,6 +370,7 @@ void GrabGetSystemStatus(void)
 	if(cur_value != cl0_lval_cnt)
 	{
 		cl0_status += 3;
+		cl0_lval_cnt = cur_value;
 		SET_BIT(grabsysStatus,1);
 	}
 	else
@@ -368,13 +398,13 @@ void GrabGetSystemStatus(void)
 	if(cur_value != cl1_fval_cnt)
 	{
 		fpga_led_status += 5;
+		cl1_fval_cnt = cur_value;
 		SET_BIT(grabsysStatus,5);
 	}
 	else
 	{
 		CLEAR_BIT(grabsysStatus,5);
 	}
-	cl1_fval_cnt = cur_value;
 
 	/* 读cl1_lval_cnt */
 	cur_value = 0;
@@ -382,13 +412,13 @@ void GrabGetSystemStatus(void)
 	if(cur_value != cl1_lval_cnt)
 	{
 		fpga_led_status += 6;
+		cl1_lval_cnt = cur_value;
 		SET_BIT(grabsysStatus,4);
 	}
 	else
 	{
 		CLEAR_BIT(grabsysStatus,4);
 	}
-	cl1_lval_cnt = cur_value;
 
 	/* 读cl1_clk_cnt */
 	cur_value = 1;
@@ -403,6 +433,8 @@ void GrabGetSystemStatus(void)
 	{
 		CLEAR_BIT(grabsysStatus,3);
 	}
+
+
 	fpga_led_status += cl0_status;
 	/*
 	 * fpga_led_status += cl0_status,也就是说当cl0_status的值变了，fpga_led_status也会跟着变（fpga_led_status后面三个值改变，不会出现）
@@ -472,11 +504,9 @@ void GrabFpgaClkStatusDog(void)
 			//todo 复位cl2_clk_pll
 			fpga_reg_read(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 			SET_BIT(tmp16Bit,3);
-			SET_BIT(tmp16Bit,5);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 			CyU3PThreadSleep(1);
 			CLEAR_BIT(tmp16Bit,3);
-			CLEAR_BIT(tmp16Bit,5);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 		}
 	}
@@ -494,11 +524,9 @@ void GrabFpgaClkStatusDog(void)
 			//todo 复位cl3_clk_pll
 			fpga_reg_read(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 			SET_BIT(tmp16Bit,4);
-			SET_BIT(tmp16Bit,5);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 			CyU3PThreadSleep(1);
 			CLEAR_BIT(tmp16Bit,4);
-			CLEAR_BIT(tmp16Bit,5);
 			fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&tmp16Bit,1);
 		}
 	}
@@ -666,7 +694,21 @@ CyBool_t GrabParamCompareandSet(tag_grab_config *PcParam)
 	}
 
 	/* n_fval_set_value */
-	if(grabconfParam.n_fval_set_value != PcParam->n_fval_set_value){grabconfParam.n_fval_set_value = PcParam->n_fval_set_value;}
+	if(grabconfParam.n_fval_set_value != PcParam->n_fval_set_value)
+	{
+		grabconfParam.n_fval_set_value = PcParam->n_fval_set_value;
+		uint16_t tmp16 = 0;
+		fpga_reg_read(PIXEL_FORMAT_REG_ADDRESS,&tmp16,1);
+		if(grabconfParam.n_fval_set_value == 0)
+		{
+			CLEAR_BIT(tmp16,8);
+		}
+		else
+		{
+			SET_BIT(tmp16,8);
+		}
+		fpga_reg_write(PIXEL_FORMAT_REG_ADDRESS,&tmp16,1);
+	}
 
 	/* n_ddr_line_bytes
 	 * 删除了
@@ -841,7 +883,9 @@ void GrabParamUpdate(void)
 	grabconfParam.n_y_offset = tmp32Bit;
 
 	/* n_fval_set_value */
-
+	tmp16Bit = 0;
+	fpga_reg_read(PIXEL_FORMAT_REG_ADDRESS,&tmp16Bit,1);
+	grabconfParam.n_fval_set_value = tmp16Bit & 0x0100;
 	/* n_ddr_line_bytes
 	 * 删除了
 	 */
@@ -958,14 +1002,18 @@ void GrabTriggerFlcBitAndUpdate(void)
 /*Debug funciton */
 void Debug_manul_reset(void)
 {
-	GrabStopFpgaWork();
-	CyFxSlFifoApplnStop();
-    /* Give a chance for the main thread loop to run. */
-    CyU3PThreadSleep (1);
-    CyFxSlFifoApplnStart();
-    CyU3PUsbStall (CY_FX_EP_CONSUMER, CyFalse, CyTrue);
-    CyU3PThreadSleep(20);
-    GrabStartFpgaWork();
-    CyU3PUsbAckSetup ();
+	if(CyTrue == TryResetChannel())
+	{
+		GrabStopFpgaWork();
+		CyFxSlFifoApplnStop();
+	    /* Give a chance for the main thread loop to run. */
+	    CyU3PThreadSleep (1);
+	    CyFxSlFifoApplnStart();
+	    CyU3PUsbStall (CY_FX_EP_CONSUMER, CyFalse, CyTrue);
+	    CyU3PUsbAckSetup ();
+	    CyU3PThreadSleep(20);
+	    GrabStartFpgaWork();
+	}
+
 }
 

@@ -156,6 +156,9 @@ typedef struct {
 
 extern tag_grab_config grabconfParam;
 extern uint32_t grabsysStatus;
+extern CyBool_t qtConnectedState;
+extern CyBool_t first_cmd;
+extern uint64_t qtDisconnectCount;
 
 
 /*function

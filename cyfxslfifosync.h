@@ -94,6 +94,7 @@ extern CyU3PUartConfig_t glUartConfig;
 /* 这两个是为了调试的时候通过sfr 手动重置通道 ，后面可以删掉*/
 void CyFxSlFifoApplnStart(void);
 void CyFxSlFifoApplnStop(void);
+CyBool_t TryResetChannel(void);
 
 /* 供其他函数调用重启设备 */
 void RestartDevice(void);

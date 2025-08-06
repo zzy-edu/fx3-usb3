@@ -179,7 +179,7 @@ void CyFxSlFifoApplnStart(
     CyU3PUsbFlushEp(CY_FX_EP_CONSUMER);
 
 
-    /* Create a DMA MANUAL_IN channel for the producer socket. */
+    /* Create a DMA AUTO channel for the producer socket. */
     dmaCfg.size = CY_FX_BULKSRCSINK_DMA_BUF_SIZE;
     dmaCfg.count = CY_FX_BULKSRCSINK_DMA_BUF_COUNT;
     dmaCfg.prodSckId = CY_FX_PRODUCER_PPORT_0_SOCKET;
@@ -237,6 +237,12 @@ void CyFxSlFifoApplnStop(
     {
         CyFxAppErrorHandler(apiRetStatus);
     }
+}
+
+CyBool_t TryResetChannel(void)
+{
+	if(glIsApplnActive) return CyTrue;
+	else return CyFalse;
 }
 
 /* Callback to handle the USB setup requests. */
@@ -302,17 +308,17 @@ CyFxSlFifoApplnUSBSetupCB(
             {
 				if (wIndex == CY_FX_EP_CONSUMER)
 				{
-						CyU3PDebugPrint(4,"CY_U3P_USB_SC_CLEAR_FEATURE happened");
 						GrabStopFpgaWork();
 						CyFxSlFifoApplnStop();
 						/* Give a chance for the main thread loop to run. */
 						CyU3PThreadSleep(1);
 						CyFxSlFifoApplnStart();
 						CyU3PUsbStall(wIndex, CyFalse, CyTrue);
+						CyU3PUsbAckSetup();
+						isHandled = CyTrue;
 						CyU3PThreadSleep(20);
 						GrabStartFpgaWork();
-						CyU3PUsbAckSetup ();
-						isHandled = CyTrue;
+						CyU3PDebugPrint(4,"\nCY_U3P_USB_SC_CLEAR_FEATURE happened");
 				}
             }
         }
@@ -766,7 +772,8 @@ void SlFifoAppThread_Entry(
 			}
             CyU3PGpioSetValue(FX3_LED_PIN, CyTrue);
             CyU3PThreadSleep(500);
-            CyU3PGpioSetValue(FX3_LED_PIN, CyFalse);
+            if(qtConnectedState)
+            	CyU3PGpioSetValue(FX3_LED_PIN, CyFalse);
             CyU3PThreadSleep(500);
             GrabGetSystemStatus();
             GrabTriggerFlcBitAndUpdate();

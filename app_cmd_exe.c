@@ -768,6 +768,7 @@ CyBool_t exe_clear_count_num(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 	//TODO 计数值清零
 	if(cmdRecv->Param_Num == 1)
 	{
+		CyU3PDebugPrint(4,"\nexe_clear_count_1 happened");
 		mainFuncRegValue |= (uint16_t)(cmdRecv->Params[0]);
 		fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&mainFuncRegValue,1);
 		//延时1ms,将寄存器复位
@@ -778,6 +779,7 @@ CyBool_t exe_clear_count_num(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 	// 如果不带参或者参数个数不为1,就是全清
 	else
 	{
+		CyU3PDebugPrint(4,"\nexe_clear_count_all happened");
 		mainFuncRegValue = 0x807F;
 		fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&mainFuncRegValue,1);
 		//延时1ms,将寄存器复位
@@ -874,6 +876,12 @@ cmd_tag_t cmd_tag[] __attribute__((aligned(32))) =
 
 CyBool_t CmdHexExecute(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend, uint32_t hex_code)
 {
+	/*用于控灯，上位机没连接时，常亮*/
+	if(first_cmd == 1)
+	{
+		first_cmd = 0;
+		qtConnectedState = CyTrue;
+	}
     switch (hex_code)
     {
     case 0:
@@ -929,6 +937,7 @@ CyBool_t CmdHexExecute(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *
     case 10:
     {
         // 得到系统状态,反馈0表示状态正常,其余为错误
+        qtDisconnectCount++;
         return exe_get_status(cmdRecv, cmdSend);
     }
     case 11:
