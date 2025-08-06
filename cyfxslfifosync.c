@@ -764,6 +764,7 @@ void SlFifoAppThread_Entry(
     {
         CyFxAppErrorHandler(0);
     }
+
     for (;;)
     {
 			while(restartFlg || restartKey)

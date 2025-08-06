@@ -330,6 +330,7 @@ CyBool_t exe_save_user_para(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCont
     if(cmdRecv->Param_Num == 0)
     {
     	nIndex = grabconfParam.n_device_type;
+    	CyU3PDebugPrint(4,"\n nIndex = %d",nIndex);
     	if(CyFalse == GrabWriteUserParam(&grabconfParam,nIndex))
     	{
     		return CyFalse;
@@ -338,6 +339,7 @@ CyBool_t exe_save_user_para(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCont
     else if(cmdRecv->Param_Num == 1)
     {
     	nIndex = *(uint8_t*)(&cmdRecv->Params[0]);
+    	CyU3PDebugPrint(4,"\n nIndex = %d",nIndex);
     	if(CyFalse == GrabWriteUserParam(&grabconfParam,nIndex))
     	{
     		return CyFalse;

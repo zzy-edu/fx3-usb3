@@ -92,7 +92,6 @@ CyBool_t fpga_init(void)
         CyU3PThreadSleep(1);
         CyU3PGpioSetValue(FPGA_N_CONFIG_PIN, CyTrue);
 
-
         if(fpga_reg_init() == CyFalse)
         {
             continue;
