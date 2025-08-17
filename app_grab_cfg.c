@@ -159,9 +159,14 @@ CyBool_t GrabGetDefaultUserParam(void)
 		return CyFalse;
 	}
 
-//	fpga_reg_read(FPGA_VERSION1_REG_ADDRESS,&fpga_version,1);
-//	CyU3PDebugPrint(4,"\nfpga_version = %x", fpga_version);
-	fpga_version  = 0;
+	fpga_reg_read(FPGA_VERSION1_REG_ADDRESS,&fpga_version,1);
+	CyU3PDebugPrint(4,"\nfpga_version = %x", fpga_version);
+	if(fpga_version > 6)
+	{
+		fpga_version  = 0;
+		CyU3PDebugPrint(4,"\n illegal fpga_version, use mode%x", fpga_version);
+	}
+
 	switch(fpga_version)
 	{
 	case 0:
@@ -557,6 +562,7 @@ CyBool_t GrabParamCompareandSet(tag_grab_config *PcParam)
 {
 	uint16_t tmp = 0;
 	uint8_t *ptmp = NULL;
+
 	if(PcParam->header != PARAM_VALID_HCODE) return CyFalse;
 	//Todo 实现刷fpga寄存器
 
@@ -636,9 +642,11 @@ CyBool_t GrabParamCompareandSet(tag_grab_config *PcParam)
 	{
 		grabconfParam.n_device_type = PcParam->n_device_type;
 		/*fpga_reg_write*/
-		CyU3PMemSet((uint8_t*)(&tmp),0,2);
-		CyU3PMemCopy((uint8_t*)(&tmp),&grabconfParam.n_device_type,1);
-		fpga_reg_write(FPGA_VERSION1_REG_ADDRESS,&tmp,1);
+		//这个寄存器是只读的，当这个值不一样的时候，应该是重启设备，切换fpga程序，fpga自己会写这个寄存器的值
+		//todo
+//		CyU3PMemSet((uint8_t*)(&tmp),0,2);
+//		CyU3PMemCopy((uint8_t*)(&tmp),&grabconfParam.n_device_type,1);
+//		fpga_reg_write(FPGA_VERSION1_REG_ADDRESS,&tmp,1);
 	}
 	/* nBitCount */
 	if(grabconfParam.nBitCount != PcParam->nBitCount){grabconfParam.nBitCount = PcParam->nBitCount;}

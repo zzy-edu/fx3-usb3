@@ -45,7 +45,7 @@ CyBool_t exe_get_FPGA_version(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCo
     fill_command_char(cmdSend, 'g', 'f', 'v', 0);
     cmdSend->Param_Num = 1;
     // TODO : fill FPGA_REG_FPGA_VERSION1_ADDR
-    fpga_reg_read(/*FPGA_REG_FPGA_VERSION1_ADDR*/ 0, (uint16_t *)&cmdSend->Params[0], 2);
+    fpga_reg_read(FPGA_VERSION1_REG_ADDRESS, (uint16_t *)&cmdSend->Params[0], 2);
     return CyTrue;
 }
 
@@ -737,7 +737,7 @@ CyBool_t exe_fpga_reset(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent 
 CyBool_t exe_rdwr_grab_param(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend)
 {
 	fill_command_char(cmdSend,'e', 'e', 'm', 'b');
-	int extraParamNum = (sizeof(tag_grab_config)-8) >> 2; // -8 是因为FX3给头加了一个8字节的校验尾，不需要上传
+	int extraParamNum = (sizeof(tag_grab_config)-8) >> 2; // -8 是因为FX3给头加了一个8字节的校验尾，不需要上传 >> 2是因为一个参数个数是4个字节
 	tag_grab_config *PcParam = NULL;
 	//读取当前模式用户配置
 	if(cmdRecv->Param_Num == 0)//读配置
@@ -745,7 +745,7 @@ CyBool_t exe_rdwr_grab_param(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 		//回复之前先更新状态
 		// 移到线程中，1s触发1次flc 在更新,这边要的直接拷贝
 //		GrabParamUpdate();
-		cmdSend->Param_Num = cmdRecv->Param_Num + extraParamNum;
+		cmdSend->Param_Num = extraParamNum;
 		CyU3PMemCopy((uint8_t*)(&cmdSend->Params[0]),(uint8_t*)(&grabconfParam),sizeof(tag_grab_config)-8);
 	}
 	else if(cmdRecv->Param_Num == extraParamNum) //写配置
@@ -794,13 +794,20 @@ CyBool_t exe_clear_count_num(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 	return CyTrue;
 }
 
+/*2侧视图（有头） 1 测试图（无头）   0实际图*/
 CyBool_t exe_set_test_mode(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend)
 {
 	fill_command_char(cmdSend,'s', 't', 'm', 'd');
-	if(cmdRecv->Param_Num == 1)
+	if(cmdRecv->Param_Num == 0)
+	{
+		fpga_reg_read(TEST_PATTERN_REG_ADDRESS,(uint16_t *)(&cmdSend->Params[0]),1);
+		cmdSend->Param_Num = 1;
+		return CyTrue;
+	}
+	else if(cmdRecv->Param_Num == 1)
 	{
 		fpga_reg_write(TEST_PATTERN_REG_ADDRESS,(uint16_t *)(&cmdRecv->Params[0]),1);
-		cmdSend->Param_Num = 1;
+		cmdSend->Param_Num = 0;
 		return CyTrue;
 	}
 	CyU3PDebugPrint(4,"\nParam_Num error");
