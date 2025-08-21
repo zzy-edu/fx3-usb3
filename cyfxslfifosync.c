@@ -77,6 +77,7 @@
 #include "fx3_pin_define.h"
 #include "fx3_common.h"
 #include "app_virtual_uart.h"
+#include "app_storage_cfg.h"
 #include <cyu3gpio.h>
 #include <uart_regs.h>
 
@@ -266,6 +267,7 @@ CyFxSlFifoApplnUSBSetupCB(
     CyU3PReturnStatus_t status = CY_U3P_SUCCESS;
     CyU3PReturnStatus_t apiRetStatus = CY_U3P_SUCCESS;
     CyU3PUartConfig_t uartConfig;
+    uint16_t data = 1;
 
     /* Decode the fields from the setup request. */
     bReqType = (setupdat0 & CY_U3P_USB_REQUEST_TYPE_MASK);
@@ -309,14 +311,27 @@ CyFxSlFifoApplnUSBSetupCB(
 				if (wIndex == CY_FX_EP_CONSUMER)
 				{
 						GrabStopFpgaWork();
+						//1、拉住fpga
 						CyFxSlFifoApplnStop();
+						//2、清空ddr
+						data = 0x8000;
+						fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&data,1);
+						//3、复位寄存器
+						data = 1;
+						fpga_reg_write(0x3340,&data,1);
 						/* Give a chance for the main thread loop to run. */
 						CyU3PThreadSleep(1);
 						CyFxSlFifoApplnStart();
 						CyU3PUsbStall(wIndex, CyFalse, CyTrue);
 						CyU3PUsbAckSetup();
 						isHandled = CyTrue;
-						CyU3PThreadSleep(20);
+						CyU3PThreadSleep(1);
+						//1、复位ddr
+						data = 0;
+						fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&data,1);
+						//2、复位寄存器
+						fpga_reg_write(0x3340,&data,1);
+						//3、放开fpga
 						GrabStartFpgaWork();
 						CyU3PDebugPrint(4,"\nCY_U3P_USB_SC_CLEAR_FEATURE happened");
 				}
@@ -753,17 +768,43 @@ USBUARTAppThread_Entry (
 void SlFifoAppThread_Entry(
     uint32_t input)
 {
+	uint8_t wrBuffer[1];
 
     // Initialize the send message buffer
     FifoInitial(&glSendFifo, glFifoBuffer, FIFO_DEEPTH_MAX_VALUE, sizeof(FIFO_DATA));
     /* Initialize the slave FIFO application */
     CyFxSlFifoApplnInit();
 
-    // initialize the FPGA
-    if(CyFalse == fpga_init())
-    {
-        CyFxAppErrorHandler(0);
-    }
+    //先拉住fpga校验密码
+    CyU3PGpioSetValue(FPGA_N_CONFIG_PIN, CyTrue);
+    CyU3PThreadSleep(100);
+    CyU3PGpioSetValue(FPGA_N_CONFIG_PIN, CyFalse);
+    CyU3PThreadSleep(1);
+	CyU3PThreadSleep(800);
+	wrBuffer[0] = 0xab;
+	MCUSpiWriteRead(wrBuffer, 1,NULL,0,0);
+
+	StorageReadSystemContent(&glbSystem);
+	// read flash id for password
+	StorageGetHard_ID(glbSystem.nDeviceUniqID);
+
+	if(!StorageCheckPassword(glbSystem.nDeviceUniqID,glbSystem.nPassword))
+	{
+		glbSystem.nisDevicePassOK = CyFalse;
+	}
+	else
+	{
+		glbSystem.nisDevicePassOK = CyTrue;
+	}
+
+	if(glbSystem.nisDevicePassOK == CyTrue)
+	{
+	    // initialize the FPGA
+		if(CyFalse == fpga_init())
+		{
+			CyFxAppErrorHandler(0);
+		}
+	}
 
     for (;;)
     {
@@ -791,46 +832,6 @@ void RestartDevice(void)
     CyU3PThreadSleep (3000);
 	// 从 main 开始重新执行的，设备会消失，很彻底，上位机的扫描有bug,我重启的时候应该断开一下，不然是假连接，控制通道和数据通道不能用
 	CyU3PDeviceReset(CyFalse);
-
-	// 第二种方法是手动释放各种资源，但这个不彻底，重启完之后，上位机可以直接使用
-//	CyU3PDebugPrint(4,"\nRestart USB' Grab Device ...");
-//	restartFlg = CyTrue;
-//	//清空fifo
-//	FifoFlush(&glSendFifo);
-//	// fpga stop
-//	GrabStopFpgaWork();
-//
-//	// dma 图像通道关闭
-//    if (glIsApplnActive)
-//    {
-//        CyFxSlFifoApplnStop();
-//    }
-//    // cdc 串口通道关闭
-//	#ifdef cdc
-//	CdcChannelTryStop();
-//	if(globUartConfig == CyTrue)
-//		CyU3PDebugDeInit(); //避免CDC端点被debug占用，导致重启设备失败
-//	#endif
-//    CyU3PUsbLPMDisable();
-//    /* Start the loop back function. */
-//    // dma 图像通道打开
-//    CyFxSlFifoApplnStart();
-//    //cdc 串口通道打开
-//	#ifdef cdc
-//		CyFxUSBUARTAppStart();
-//		if(globUartConfig == CyTrue)
-//			DebugInitUsingCDC();
-//	#endif
-//	// fpga_Reinit
-//	if(CyFalse == fpga_Reinit())
-//	{
-//		CyFxAppErrorHandler(0);
-//	}
-//	// fpga start
-//	GrabStartFpgaWork();
-//	CyU3PThreadSleep(10000);
-//	restartFlg = CyFalse;
-//	CyU3PDebugPrint(4,"\nRestart USB' Grab Device ...ok");
 }
 
 
@@ -899,7 +900,8 @@ RestartAppThread_Entry (
             }
             else
             {
-            	GrabFpgaClkStatusDog();
+            	if(glbCheckDogEnable == CyTrue)
+            		GrabFpgaClkStatusDog();
             	CyU3PThreadSleep(1000);
             }
     	}

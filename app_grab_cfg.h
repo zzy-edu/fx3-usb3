@@ -30,6 +30,7 @@
 #include <cyu3error.h>
 #include "flash_map.h"
 #include "version.h"
+#include "app_storage_cfg.h"
 
 /*
  * flash 存储结构设定
@@ -159,7 +160,7 @@ extern uint32_t grabsysStatus;
 extern CyBool_t qtConnectedState;
 extern CyBool_t first_cmd;
 extern uint64_t qtDisconnectCount;
-
+extern CyBool_t glbCheckDogEnable;
 
 /*function
 ********************************************************************************

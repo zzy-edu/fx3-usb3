@@ -131,8 +131,7 @@ CyBool_t exe_set_system_password(tagCmdFormatterContent *cmdRecv, tagCmdFormatte
     }
     for (i = 0; i < 8; i++)
     {
-        // TODO :
-        // glbSystem.nPassword[i] = cmdRecv->Params[i] & 0xFF;
+         glbSystem.nPassword[i] = cmdRecv->Params[i] & 0xFF;
     }
     return CyTrue;
 }
@@ -244,7 +243,27 @@ int flashSelect = 1; // 默认选择从flash偏移地址开始,如果选择为0则从flash开始操作
 CyBool_t exe_erase_flash_sector(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend)
 {
     fill_command_char(cmdSend, 'f', 'e', 'r', 0);
-    CyU3PGpioSetValue(FPGA_N_CONFIG_PIN, CyFalse);
+
+    //fpga升级地址做如下操作
+    if((cmdRecv->Params[0] >= (FX3_FLASH_LEN*2/FX3_FLASH_SECTOR_SIZE)) && (cmdRecv->Params[0] < (FX3_FLASH_LEN*3/FX3_FLASH_SECTOR_SIZE)))
+    {
+    	flashSelect = 0;
+    	cmdRecv->Params[0] -= ((FX3_FLASH_LEN*2)/FX3_FLASH_SECTOR_SIZE);
+    }
+    else if((cmdRecv->Params[0] >= (FX3_FLASH_LEN*3/FX3_FLASH_SECTOR_SIZE)) && (cmdRecv->Params[0] < (FX3_FLASH_LEN*4/FX3_FLASH_SECTOR_SIZE)))
+    {
+    	flashSelect = 0;
+    	cmdRecv->Params[0] -= ((FX3_FLASH_LEN*3)/FX3_FLASH_SECTOR_SIZE);
+    }
+    else if((cmdRecv->Params[0] >= (FX3_FLASH_LEN*4/FX3_FLASH_SECTOR_SIZE)) && (cmdRecv->Params[0] < (FX3_FLASH_LEN*5/FX3_FLASH_SECTOR_SIZE)))
+    {
+    	flashSelect = 0;
+    	cmdRecv->Params[0] -= ((FX3_FLASH_LEN*4)/FX3_FLASH_SECTOR_SIZE);
+    }
+    else
+    {
+    	flashSelect = 1;
+    }
     if (MCUFlashEraseSector(0, FLASH_START_SECTOR * flashSelect + cmdRecv->Params[0]) == CyTrue)
     {
         return CyTrue;
@@ -263,7 +282,27 @@ CyBool_t exe_program_flash(tagCmdFormatterContent *cmdRecv, tagCmdFormatterConte
     {
         return CyFalse;
     }
-    CyU3PGpioSetValue(FPGA_N_CONFIG_PIN, CyFalse);
+
+    //fpga升级地址做如下操作
+    if( (cmdRecv->Params[0] >= (FX3_FLASH_LEN*2)) && (cmdRecv->Params[0] < (FX3_FLASH_LEN*3)))
+    {
+    	flashSelect = 0;
+    	cmdRecv->Params[0] -= ((FX3_FLASH_LEN*2));
+    }
+    else if((cmdRecv->Params[0] >= (FX3_FLASH_LEN*3)) && (cmdRecv->Params[0] < (FX3_FLASH_LEN*4)))
+    {
+    	flashSelect = 0;
+    	cmdRecv->Params[0] -= ((FX3_FLASH_LEN*3));
+    }
+    else if((cmdRecv->Params[0] >= (FX3_FLASH_LEN*4)) && (cmdRecv->Params[0] < (FX3_FLASH_LEN*5)))
+    {
+    	flashSelect = 0;
+    	cmdRecv->Params[0] -= ((FX3_FLASH_LEN*4));
+    }
+    else
+    {
+    	flashSelect = 1;
+    }
     if (MCUSpiFlashWrite(0, (uint8_t *)&cmdRecv->Params[2],
                        FLASH_START_SECTOR * FX3_FLASH_SECTOR_SIZE * flashSelect + cmdRecv->Params[0],
                        cmdRecv->Params[1]) == CyFalse)
@@ -752,7 +791,9 @@ CyBool_t exe_rdwr_grab_param(tagCmdFormatterContent *cmdRecv, tagCmdFormatterCon
 	{
 			PcParam = ((tag_grab_config*)(&cmdRecv->Params[0]));
 	        cmdSend->Param_Num = 0;
-	        if(CyFalse == GrabParamCompareandSet(PcParam)) return CyFalse;
+	        if(glbSystem.nisDevicePassOK == CyTrue)
+	        {if(CyFalse == GrabParamCompareandSet(PcParam)) return CyFalse;}
+	        else {CyU3PDebugPrint(4,"\n passwd wrong");}
 	}
 	else
 	{
@@ -832,6 +873,29 @@ CyBool_t exe_set_trigger(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent
 	return CyTrue;
 }
 
+/* 关闭/打开 检查fpga */
+CyBool_t exe_start(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend)
+{
+	fill_command_char(cmdSend,'s','t','a','t');
+	if(cmdRecv->Param_Num == 0)
+	{
+		if(glbCheckDogEnable == CyTrue)glbCheckDogEnable = CyFalse;
+		return CyTrue;
+	}
+	return CyFalse;
+}
+CyBool_t exe_stop(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *cmdSend)
+{
+	fill_command_char(cmdSend,'s','t','o','p');
+	if(cmdRecv->Param_Num == 0)
+	{
+		if(glbCheckDogEnable == CyFalse)glbCheckDogEnable = CyTrue;
+		return CyTrue;
+	}
+	return CyFalse;
+}
+
+
 cmd_tag_t cmd_tag[] __attribute__((aligned(32))) =
     {
         // NOTE : system
@@ -872,8 +936,10 @@ cmd_tag_t cmd_tag[] __attribute__((aligned(32))) =
         {57, {'g', 'f', 'r', 0}},   // 得到fpga寄存器值: [1] 地址 [2] 长度 [3] 数量 [4] 偏移量
 
         // NOTE : io
-        {58, {'s', 'i', 'o', 0}},   //设置io管脚的值
-        {59, {'s', 't', 'i', 'o'}},   //初始化io管脚的类型
+//        {58, {'s', 'i', 'o', 0}},   //设置io管脚的值
+//        {59, {'s', 't', 'i', 'o'}},   //初始化io管脚的类型
+        {58,{'s','t','o','p'}},
+        {59,{'s','t','a','t'}},
         {60, {'g', 'i', 'o', 0}},   //获取io管脚的值
         // NOTE: +++
         {80,{'s','t','r','i'}},
@@ -1040,12 +1106,14 @@ CyBool_t CmdHexExecute(tagCmdFormatterContent *cmdRecv, tagCmdFormatterContent *
     case 58:
 	{
 		// 设置io管脚的值
-		return exe_set_io(cmdRecv, cmdSend);
+//		return exe_set_io(cmdRecv, cmdSend);
+		return exe_stop(cmdRecv,cmdSend);
 	}
     case 59:
 	{
 		// 初始化io管脚的类型
-		return exe_set_type_io(cmdRecv, cmdSend);
+//		return exe_set_type_io(cmdRecv, cmdSend);
+		return exe_start(cmdRecv,cmdSend);
 	}
     case 60:
 	{

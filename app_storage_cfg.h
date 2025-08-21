@@ -81,6 +81,7 @@ typedef struct
 	uint8_t nisDevicePassOK;  //是否设备id校验成功
 	uint8_t nReserved[71];
 } __attribute__((aligned(32))) tagSystemContent;
+
 #define SYSTEM_CONTENT_DEFAULT_VALUE \
 	{                                \
 		{'m', 'o', 'r', 'e'},        \
@@ -88,7 +89,7 @@ typedef struct
 		{0},                     	 \
 		1,                       	 \
 		2,                       	 \
-		{0x2021, 0x08, 0x10},    	 \
+		{0x2025, 0x08, 0x18},    	 \
 		0,                       	 \
 		{0},                     	 \
 		0,                       	 \
@@ -114,4 +115,6 @@ CyBool_t StorageSetDefaultUserParam(int nIndex); // 设置默认参数区
 *******************************************************************************/
 CyBool_t StorageSaveSystemContent(tagSystemContent *pContent);
 CyBool_t StorageReadSystemContent(tagSystemContent *pContent);
+void StorageGetHard_ID( uint8_t* nBuffer);
+CyBool_t StorageCheckPassword(uint8_t* id,uint8_t *pPassword);
 #endif

@@ -55,6 +55,7 @@
 #define FVAL_STTVALUE_FLUCTUATE_REG_ADDRESS			(0x0190) // 0x0190~0x01C3
 
 
+void fpga_version_get(void);
 /*function
 ********************************************************************************
 <PRE>

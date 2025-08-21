@@ -28,8 +28,10 @@
 #include "mcu_spi.h"
 #include "fpga_config.h"
 #include "cyu3system.h"
+#include "fx3_common.h"
 
 #include "cyfxslfifosync.h"
+#include "app_storage_cfg.h"
 #include "cyu3usb.h"
 // 全局使用的采集参数
 tag_grab_config grabconfParam = GRAB_PARAM_DEFAULT_VALUE;
@@ -55,6 +57,7 @@ CyBool_t first_cmd = CyTrue;
 CyBool_t qtConnectedState = CyFalse;
 uint64_t qtDisconnectCount = 0;
 uint64_t qtDisconnectOldCount = 0;
+CyBool_t glbCheckDogEnable = CyTrue;
 
 
 /*function
@@ -166,7 +169,8 @@ CyBool_t GrabGetDefaultUserParam(void)
 		fpga_version  = 0;
 		CyU3PDebugPrint(4,"\n illegal fpga_version, use mode%x", fpga_version);
 	}
-
+	// 在这里获取一次fpga的版本号
+	fpga_version_get();
 	switch(fpga_version)
 	{
 	case 0:
@@ -232,6 +236,7 @@ CyBool_t GrabGetDefaultUserParam(void)
 	default:
 		break;
 	}
+
 	CyU3PMemFree(tmp);
 	return CyTrue;
 }
@@ -758,12 +763,12 @@ CyBool_t GrabParamCompareandSet(tag_grab_config *PcParam)
 	}
 
 	/* n_cc1_pwm_current */
-	if(grabconfParam.n_cc1_pwm_current != PcParam->n_cc1_pwm_current)
-	{
-		grabconfParam.n_cc1_pwm_current = PcParam->n_cc1_pwm_current;
-		/*fpga_reg_write*/
-		fpga_reg_write(CC1_OUT_NUM_REG_ADDRESS,(uint16_t *)(&grabconfParam.n_cc1_pwm_current),2);
-	}
+//	if(grabconfParam.n_cc1_pwm_current != PcParam->n_cc1_pwm_current)
+//	{
+//		grabconfParam.n_cc1_pwm_current = PcParam->n_cc1_pwm_current;
+//		/*fpga_reg_write*/
+//		fpga_reg_write(CC1_OUT_NUM_REG_ADDRESS,(uint16_t *)(&grabconfParam.n_cc1_pwm_current),2);
+//	}
 
 	/* S1_sel  S2_sel */
 	if((grabconfParam.S1_sel != PcParam->S1_sel) || (grabconfParam.S2_sel != PcParam->S2_sel))
@@ -777,6 +782,7 @@ CyBool_t GrabParamCompareandSet(tag_grab_config *PcParam)
 		ptmp[1] = grabconfParam.S2_sel;
 		fpga_reg_write(TEST_S1_S2_REG_ADDRESS,&tmp,1);
 	}
+
 
 	return CyTrue;
 }
@@ -865,9 +871,6 @@ void GrabParamUpdate(void)
 	grabconfParam.n_dval_lval_mode = *(uint8_t *)(&tmp16Bit);
 
 	/* n_fpga_version*/
-	tmp32Bit = 0;
-	fpga_reg_read(FPGA_VERSION1_REG_ADDRESS,(uint16_t*)&tmp32Bit,2);
-	grabconfParam.n_fpga_version = tmp32Bit;
 
 	/* n_fx3_version */
 

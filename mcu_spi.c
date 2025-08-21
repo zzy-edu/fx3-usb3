@@ -232,6 +232,9 @@ CyBool_t MCUSpiFlashWrite(uint8_t nFlashNumber, uint8_t *pSrc, uint32_t dst, uin
             CyFx3BusyWait(10);
         } // while 存储
 
+        //这里的作用是回读校验，保证写入flash的数据是正确的
+        //这是第一种实现的方式， 一边写一边校验
+        //第二种实现方式是写完后重新读一遍，算一个校验码，两边只比较一个校验码就可以
         if (!MCUSpiFlashRead(0, dst, location, nLen))
         {
             return CyFalse;

@@ -8,6 +8,13 @@
 
 CyU3PMutex  fpga_spi_lock;
 
+void fpga_version_get(void)
+{
+	uint32_t tmp32Bit = 0;
+	tmp32Bit = 0;
+	fpga_reg_read(FPGA_VERSION1_REG_ADDRESS,(uint16_t*)&tmp32Bit,2);
+	grabconfParam.n_fpga_version = tmp32Bit;
+}
 
 /*
  * fpga spi 锁的初始化
@@ -91,7 +98,8 @@ CyBool_t fpga_init(void)
         CyU3PGpioSetValue(FPGA_N_CONFIG_PIN, CyFalse);
         CyU3PThreadSleep(1);
         CyU3PGpioSetValue(FPGA_N_CONFIG_PIN, CyTrue);
-
+        //下载程序
+//        return CyTrue;
         if(fpga_reg_init() == CyFalse)
         {
             continue;
@@ -104,6 +112,7 @@ CyBool_t fpga_init(void)
         {
     		CyU3PThreadSleep(800);
     		MCUSpiWriteRead(wrBuffer, 1,NULL,0,0);
+
     		fpga_locked_init();
     		//清空一些计数值
     		fpga_reg_write(MAIN_FUNCTION_REG_ADDRESS,&clearvalue,1);
